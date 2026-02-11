@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cointools — Top Holder Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    --bg: #09090b; --surface: #18181b; --border: #27272a; --muted: #71717a;
+    --text: #e4e4e7; --green: #22c55e; --red: #ef4444; --blue: #3b82f6;
+    --yellow: #eab308; --cyan: #06b6d4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 0;
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 2rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .header h1 { font-size: 1.1rem; font-weight: 600; }
+  .header .tag {
+    font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+
+  /* Search area */
+  .search-wrap {
+    max-width: 720px; margin: 2.5rem auto 0; padding: 0 1.5rem;
+  }
+  .search-box {
+    display: flex; gap: 0.5rem; align-items: stretch;
+  }
+  .search-box input {
+    flex: 1; padding: 0.7rem 1rem; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-size: 0.95rem; font-family: monospace; outline: none; transition: border 0.15s;
+  }
+  .search-box input:focus { border-color: var(--muted); }
+  .search-box input::placeholder { color: var(--muted); font-family: sans-serif; }
+  .search-box button {
+    padding: 0.7rem 1.4rem; border-radius: 8px; border: none;
+    background: #fff; color: #000; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+  }
+  .search-box button:hover { opacity: 0.85; }
+  .search-box button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .options-row {
+    display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap; align-items: center;
+  }
+  .options-row label { font-size: 0.8rem; color: var(--muted); }
+  .pill-group { display: flex; gap: 0; }
+  .pill-group button {
+    padding: 0.3rem 0.7rem; font-size: 0.78rem; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .pill-group button:first-child { border-radius: 6px 0 0 6px; }
+  .pill-group button:last-child { border-radius: 0 6px 6px 0; }
+  .pill-group button:not(:first-child) { border-left: none; }
+  .pill-group button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .chain-badge {
+    font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 6px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+  .chain-badge.detected { color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 30%, transparent); }
+
+  /* Status */
+  .status {
+    max-width: 720px; margin: 1.5rem auto 0; padding: 0 1.5rem;
+    font-size: 0.85rem; color: var(--muted); min-height: 1.2rem;
+  }
+  .status.error { color: var(--red); }
+
+  /* Results */
+  .results {
+    max-width: 960px; margin: 1.5rem auto 0; padding: 0 1.5rem;
+    display: none;
+  }
+  .results.visible { display: block; }
+
+  .summary-bar {
+    display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .summary-stat {
+    padding: 0.5rem 1rem; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .summary-stat .val { font-weight: 700; font-size: 1rem; }
+  .summary-stat .lbl { color: var(--muted); font-size: 0.75rem; }
+  .sentiment-badge {
+    padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700;
+    font-size: 0.9rem; text-transform: uppercase;
+  }
+
+  .charts-grid {
+    display: grid; grid-template-columns: 5fr 3fr; gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1rem;
+  }
+  .chart-card h3 { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
+  canvas { max-height: 280px; }
+
+  /* Table */
+  .holders-table {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    margin-bottom: 2rem;
+  }
+  .holders-table th {
+    text-align: left; padding: 0.6rem 0.75rem; background: color-mix(in srgb, var(--surface) 80%, var(--border));
+    color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .holders-table td {
+    padding: 0.55rem 0.75rem; border-top: 1px solid var(--border); font-size: 0.85rem;
+  }
+  .holders-table tr:hover td { background: color-mix(in srgb, var(--surface) 50%, var(--border)); }
+  .mono { font-family: monospace; color: var(--muted); font-size: 0.8rem; }
+  .r { text-align: right; font-family: monospace; }
+  .signal {
+    display: inline-block; padding: 0.12rem 0.5rem; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 700; color: #fff;
+  }
+
+  @media (max-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .search-box { flex-direction: column; }
+    .header { padding: 1rem; }
+    .search-wrap, .results, .status { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>cointools</h1>
+  <span class="tag">top holder tracker</span>
+</div>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <input id="addressInput" type="text" placeholder="Paste token contract address..." spellcheck="false" autocomplete="off" />
+    <button id="analyzeBtn" onclick="runAnalysis()">Analyze</button>
+  </div>
+  <div class="options-row">
+    <label>Period:</label>
+    <div class="pill-group" id="periodGroup">
+      <button data-val="1h">1H</button>
+      <button data-val="24h" class="active">24H</button>
+      <button data-val="7d">7D</button>
+      <button data-val="30d">30D</button>
+    </div>
+    <span id="chainBadge" class="chain-badge">chain: auto</span>
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<div class="results" id="results">
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Balance Changes</h3>
+      <canvas id="changeChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Holder Sentiment</h3>
+      <canvas id="sentimentChart"></canvas>
+    </div>
+  </div>
+  <table class="holders-table">
+    <thead>
+      <tr><th>#</th><th>Holder</th><th class="r">Balance</th><th class="r">Change</th><th>Signal</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────
+const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+const ANKR_RPC   = 'https://rpc.ankr.com/multichain';
+const EVM_RPCS   = {
+  base: 'https://rpc.ankr.com/base',
+  eth: 'https://rpc.ankr.com/eth',
+};
+const PERIODS = { '1h': 3600, '24h': 86400, '7d': 604800, '30d': 2592000 };
+const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#52525b', NEW: '#3b82f6' };
+
+let changeChart = null, sentimentChart = null;
+let selectedPeriod = '24h';
+
+// ── Period pills ────────────────────────────────────────────
+document.querySelectorAll('#periodGroup button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelector('#periodGroup .active')?.classList.remove('active');
+    btn.classList.add('active');
+    selectedPeriod = btn.dataset.val;
+  });
+});
+
+// ── Enter key ───────────────────────────────────────────────
+document.getElementById('addressInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runAnalysis();
+});
+
+// ── Auto-detect on paste/type ───────────────────────────────
+document.getElementById('addressInput').addEventListener('input', () => {
+  const addr = document.getElementById('addressInput').value.trim();
+  const badge = document.getElementById('chainBadge');
+  if (addr.startsWith('0x') && addr.length === 42) {
+    badge.textContent = 'chain: base (EVM)';
+    badge.classList.add('detected');
+  } else if (addr.length >= 32 && addr.length <= 44 && !addr.startsWith('0x')) {
+    badge.textContent = 'chain: solana';
+    badge.classList.add('detected');
+  } else {
+    badge.textContent = 'chain: auto';
+    badge.classList.remove('detected');
+  }
+});
+
+// ── Helpers ─────────────────────────────────────────────────
+function shorten(addr, n = 4) {
+  if (!addr) return '—';
+  return addr.length <= n * 2 + 2 ? addr : addr.slice(0, n) + '..' + addr.slice(-n);
+}
+
+function fmtBal(v) {
+  if (v == null) return '—';
+  if (v >= 1e9) return (v / 1e9).toLocaleString(undefined, { maximumFractionDigits: 2 }) + 'B';
+  if (v >= 1e6) return (v / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 }) + 'M';
+  if (v >= 1e3) return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function setStatus(msg, isError = false) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (isError ? ' error' : '');
+}
+
+function detectChain(addr) {
+  return (addr.startsWith('0x') && addr.length === 42) ? 'base' : 'solana';
+}
+
+async function rpc(url, method, params) {
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+  return data.result;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Solana analysis ─────────────────────────────────────────
+async function analyzeSolana(mint, periodSecs) {
+  setStatus('Fetching top 20 holders...');
+  const res = await rpc(SOLANA_RPC, 'getTokenLargestAccounts', [mint]);
+  const accounts = res.value;
+  if (!accounts || accounts.length === 0) throw new Error('No holders found for this token.');
+
+  const holders = accounts.map((a, i) => ({
+    tokenAccount: a.address,
+    currentBalance: parseFloat(a.uiAmountString),
+    decimals: a.decimals,
+    rank: i + 1,
+    owner: null,
+    historicalBalance: null,
+  }));
+
+  // Resolve owners
+  setStatus(`Resolving ${holders.length} holder wallets...`);
+  for (let i = 0; i < holders.length; i++) {
+    try {
+      const info = await rpc(SOLANA_RPC, 'getAccountInfo', [holders[i].tokenAccount, { encoding: 'jsonParsed' }]);
+      if (info?.value?.data?.parsed?.info?.owner) {
+        holders[i].owner = info.value.data.parsed.info.owner;
+      }
+    } catch (_) {}
+    if (i % 5 === 4) await sleep(100);
+  }
+
+  // Find historical balances
+  const targetTime = Math.floor(Date.now() / 1000) - periodSecs;
+  setStatus('Reconstructing historical balances...');
+
+  for (let i = 0; i < holders.length; i++) {
+    setStatus(`Looking up history for holder ${i + 1}/${holders.length}...`);
+    try {
+      holders[i].historicalBalance = await solanaHistoricalBalance(
+        holders[i].tokenAccount, targetTime
+      );
+    } catch (_) {}
+  }
+
+  return holders.map(h => ({
+    rank: h.rank,
+    holderAddress: h.tokenAccount,
+    ownerAddress: h.owner || h.tokenAccount,
+    currentBalance: h.currentBalance,
+    historicalBalance: h.historicalBalance,
+  }));
+}
+
+async function solanaHistoricalBalance(tokenAccount, targetTime) {
+  let before = undefined;
+  for (let page = 0; page < 3; page++) {
+    const opts = { limit: 500 };
+    if (before) opts.before = before;
+    await sleep(120);
+    const sigs = await rpc(SOLANA_RPC, 'getSignaturesForAddress', [tokenAccount, opts]);
+    if (!sigs || sigs.length === 0) return null;
+
+    for (const sig of sigs) {
+      if (sig.blockTime && sig.blockTime <= targetTime) {
+        await sleep(120);
+        const tx = await rpc(SOLANA_RPC, 'getTransaction', [
+          sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
+        ]);
+        if (tx) {
+          const bal = extractSolanaBalance(tx, tokenAccount);
+          if (bal !== null) return bal;
+        }
+        return null;
+      }
+      before = sig.signature;
+    }
+
+    const lastTime = sigs[sigs.length - 1]?.blockTime || 0;
+    if (lastTime < targetTime) {
+      // Went past target — find closest sig after target
+      for (let j = sigs.length - 1; j >= 0; j--) {
+        if (sigs[j].blockTime && sigs[j].blockTime >= targetTime) {
+          await sleep(120);
+          const tx = await rpc(SOLANA_RPC, 'getTransaction', [
+            sigs[j].signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
+          ]);
+          if (tx) {
+            const bal = extractSolanaBalance(tx, tokenAccount);
+            if (bal !== null) return bal;
+          }
+          break;
+        }
+      }
+      return null;
+    }
+  }
+  return null;
+}
+
+function extractSolanaBalance(tx, tokenAccount) {
+  const meta = tx?.meta;
+  if (!meta) return null;
+  const keys = tx?.transaction?.message?.accountKeys || [];
+  const accountAddrs = keys.map(k => typeof k === 'string' ? k : k.pubkey);
+  for (const bal of (meta.postTokenBalances || [])) {
+    const idx = bal.accountIndex;
+    if (idx >= 0 && idx < accountAddrs.length && accountAddrs[idx] === tokenAccount) {
+      const amt = bal.uiTokenAmount?.uiAmountString;
+      if (amt != null) return parseFloat(amt);
+    }
+  }
+  return null;
+}
+
+// ── EVM analysis ────────────────────────────────────────────
+async function analyzeEVM(contract, chain, periodSecs) {
+  const evmRpc = EVM_RPCS[chain] || EVM_RPCS.base;
+
+  setStatus('Fetching top holders from Ankr...');
+  const ankrRes = await rpc(ANKR_RPC, 'ankr_getTokenHolders', {
+    blockchain: chain, contractAddress: contract, pageSize: 20,
+  });
+  const rawHolders = ankrRes?.holders || [];
+  if (rawHolders.length === 0) throw new Error('No holders found. Check the contract address.');
+
+  setStatus('Fetching token decimals...');
+  let decimals = 18;
+  try {
+    const decResult = await rpc(evmRpc, 'eth_call', [
+      { to: contract, data: '0x313ce567' }, 'latest'
+    ]);
+    if (decResult && decResult !== '0x') decimals = parseInt(decResult, 16);
+  } catch (_) {}
+
+  setStatus('Getting current block...');
+  const blockHex = await rpc(evmRpc, 'eth_blockNumber', []);
+  const currentBlock = parseInt(blockHex, 16);
+  const blockTime = chain === 'arbitrum' ? 0.25 : 2.0;
+  const historicalBlock = Math.max(1, currentBlock - Math.floor(periodSecs / blockTime));
+
+  const holders = rawHolders.slice(0, 20).map((h, i) => {
+    let bal = 0;
+    try { bal = parseInt(h.balance) / (10 ** decimals); } catch (_) {
+      try { bal = parseFloat(h.balance) / (10 ** decimals); } catch (_) {}
+    }
+    return {
+      rank: i + 1,
+      holderAddress: h.holderAddress,
+      ownerAddress: h.holderAddress,
+      currentBalance: bal,
+      historicalBalance: null,
+    };
+  });
+
+  setStatus(`Fetching historical balances (block ${historicalBlock.toLocaleString()})...`);
+  for (let i = 0; i < holders.length; i++) {
+    setStatus(`Historical balance for holder ${i + 1}/${holders.length}...`);
+    try {
+      const padded = holders[i].holderAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+      const data = '0x70a08231' + padded;
+      const result = await rpc(evmRpc, 'eth_call', [
+        { to: contract, data }, '0x' + historicalBlock.toString(16)
+      ]);
+      if (result && result !== '0x') {
+        holders[i].historicalBalance = parseInt(result, 16) / (10 ** decimals);
+      }
+    } catch (_) {}
+    if (i % 4 === 3) await sleep(100);
+  }
+
+  return holders;
+}
+
+// ── Signal classification ───────────────────────────────────
+function classify(holders) {
+  return holders.map(h => {
+    const cur = h.currentBalance;
+    const hist = h.historicalBalance;
+    let signal, change = null, changePct = null;
+
+    if (hist == null) {
+      signal = 'NEW';
+    } else {
+      change = cur - hist;
+      const eps = Math.max(cur, hist, 1) * 1e-9;
+      if (Math.abs(change) < eps) { signal = 'HOLD'; change = 0; }
+      else if (change > 0) signal = 'BUY';
+      else signal = 'SELL';
+      if (hist !== 0) changePct = (change / hist) * 100;
+    }
+
+    return { ...h, signal, change, changePct };
+  });
+}
+
+// ── Render ──────────────────────────────────────────────────
+function render(classified, period) {
+  const buying  = classified.filter(h => h.signal === 'BUY').length;
+  const selling = classified.filter(h => h.signal === 'SELL').length;
+  const holding = classified.filter(h => h.signal === 'HOLD').length;
+  const unknown = classified.filter(h => h.signal === 'NEW').length;
+
+  let sentiment, sentColor;
+  if (buying > selling) { sentiment = 'ACCUMULATION'; sentColor = SIGNAL_COLORS.BUY; }
+  else if (selling > buying) { sentiment = 'DISTRIBUTION'; sentColor = SIGNAL_COLORS.SELL; }
+  else { sentiment = 'NEUTRAL'; sentColor = '#eab308'; }
+
+  // Summary bar
+  document.getElementById('summaryBar').innerHTML = `
+    <div class="summary-stat"><div class="val" style="color:var(--green)">${buying}</div><div class="lbl">Buying</div></div>
+    <div class="summary-stat"><div class="val" style="color:var(--red)">${selling}</div><div class="lbl">Selling</div></div>
+    <div class="summary-stat"><div class="val">${holding}</div><div class="lbl">Holding</div></div>
+    ${unknown ? `<div class="summary-stat"><div class="val" style="color:var(--blue)">${unknown}</div><div class="lbl">New</div></div>` : ''}
+    <div class="sentiment-badge" style="background:${sentColor}">${sentiment}</div>
+  `;
+
+  // Table
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = classified.map(h => {
+    let changeStr = '—';
+    if (h.change != null) {
+      const prefix = h.change > 0 ? '+' : '';
+      const pct = h.changePct != null ? ` (${prefix}${h.changePct.toFixed(1)}%)` : '';
+      changeStr = `${prefix}${fmtBal(Math.abs(h.change))}${pct}`;
+    }
+    const color = SIGNAL_COLORS[h.signal] || '#52525b';
+    return `<tr>
+      <td>${h.rank}</td>
+      <td class="mono">${shorten(h.ownerAddress, 6)}</td>
+      <td class="r">${fmtBal(h.currentBalance)}</td>
+      <td class="r" style="color:${color}">${changeStr}</td>
+      <td><span class="signal" style="background:${color}">${h.signal}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Charts
+  const labels = classified.map(h => shorten(h.ownerAddress, 3));
+  const changes = classified.map(h => h.change ?? 0);
+  const colors = classified.map(h => SIGNAL_COLORS[h.signal]);
+
+  if (changeChart) changeChart.destroy();
+  changeChart = new Chart(document.getElementById('changeChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data: changes, backgroundColor: colors, borderRadius: 3 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#52525b', font: { size: 9 } }, grid: { display: false } },
+        y: { ticks: { color: '#52525b' }, grid: { color: '#27272a' } }
+      }
+    }
+  });
+
+  const sentVals = [buying, selling, holding, unknown].filter(v => v > 0);
+  const sentLabels = ['Buying', 'Selling', 'Holding', 'New'].filter((_, i) => [buying, selling, holding, unknown][i] > 0);
+  const sentColors = ['#22c55e', '#ef4444', '#52525b', '#3b82f6'].filter((_, i) => [buying, selling, holding, unknown][i] > 0);
+
+  if (sentimentChart) sentimentChart.destroy();
+  sentimentChart = new Chart(document.getElementById('sentimentChart'), {
+    type: 'doughnut',
+    data: {
+      labels: sentLabels,
+      datasets: [{ data: sentVals, backgroundColor: sentColors, borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, cutout: '60%',
+      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 10, font: { size: 11 } } } }
+    }
+  });
+
+  document.getElementById('results').classList.add('visible');
+}
+
+// ── Main ────────────────────────────────────────────────────
+async function runAnalysis() {
+  const address = document.getElementById('addressInput').value.trim();
+  if (!address) { setStatus('Please enter a contract address.', true); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  document.getElementById('results').classList.remove('visible');
+
+  try {
+    const chain = detectChain(address);
+    const periodSecs = PERIODS[selectedPeriod];
+
+    let holders;
+    if (chain === 'solana') {
+      holders = await analyzeSolana(address, periodSecs);
+    } else {
+      holders = await analyzeEVM(address, chain, periodSecs);
+    }
+
+    if (!holders || holders.length === 0) throw new Error('No holders found.');
+
+    const classified = classify(holders);
+    render(classified, selectedPeriod);
+    setStatus(`Done — ${holders.length} holders analyzed on ${chain}.`);
+  } catch (e) {
+    setStatus(e.message || 'Something went wrong.', true);
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
