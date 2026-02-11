@@ -217,7 +217,10 @@
 
 <script>
 // ── Config ──────────────────────────────────────────────────
-const SOLANA_RPC = 'https://api.mainnet-beta.solana.com';
+const SOLANA_RPCS = [
+  'https://rpc.ankr.com/solana',
+  'https://api.mainnet-beta.solana.com',
+];
 const MORALIS_BASE = 'https://deep-index.moralis.io/api/v2.2';
 const EVM_RPCS = {
   base: 'https://rpc.ankr.com/base',
@@ -314,12 +317,26 @@ async function rpc(url, method, params) {
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.result;
 }
+
+// Solana RPC with automatic fallback across multiple endpoints
+async function solanaRpc(method, params) {
+  let lastErr;
+  for (const url of SOLANA_RPCS) {
+    try {
+      return await rpc(url, method, params);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`RPC ${url} failed for ${method}: ${e.message}`);
+    }
+  }
+  throw lastErr || new Error(`All Solana RPCs failed for ${method}`);
+}
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Solana analysis ─────────────────────────────────────────
 async function analyzeSolana(mint, periodSecs) {
   setStatus('Fetching top 20 holders...');
-  const res = await rpc(SOLANA_RPC, 'getTokenLargestAccounts', [mint]);
+  const res = await solanaRpc('getTokenLargestAccounts', [mint]);
   const accounts = res.value;
   if (!accounts || accounts.length === 0) throw new Error('No holders found for this token.');
 
@@ -332,7 +349,7 @@ async function analyzeSolana(mint, periodSecs) {
   setStatus(`Resolving ${holders.length} holder wallets...`);
   for (let i = 0; i < holders.length; i++) {
     try {
-      const info = await rpc(SOLANA_RPC, 'getAccountInfo', [holders[i].tokenAccount, { encoding: 'jsonParsed' }]);
+      const info = await solanaRpc('getAccountInfo', [holders[i].tokenAccount, { encoding: 'jsonParsed' }]);
       if (info?.value?.data?.parsed?.info?.owner) holders[i].owner = info.value.data.parsed.info.owner;
     } catch (_) {}
     if (i % 5 === 4) await sleep(150);
@@ -359,13 +376,13 @@ async function solanaHistoricalBalance(tokenAccount, targetTime) {
     const opts = { limit: 500 };
     if (before) opts.before = before;
     await sleep(150);
-    const sigs = await rpc(SOLANA_RPC, 'getSignaturesForAddress', [tokenAccount, opts]);
+    const sigs = await solanaRpc('getSignaturesForAddress', [tokenAccount, opts]);
     if (!sigs || sigs.length === 0) return null;
 
     for (const sig of sigs) {
       if (sig.blockTime && sig.blockTime <= targetTime) {
         await sleep(150);
-        const tx = await rpc(SOLANA_RPC, 'getTransaction', [
+        const tx = await solanaRpc('getTransaction', [
           sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
         ]);
         if (tx) { const b = extractSolBal(tx, tokenAccount); if (b !== null) return b; }
@@ -378,7 +395,7 @@ async function solanaHistoricalBalance(tokenAccount, targetTime) {
       for (let j = sigs.length - 1; j >= 0; j--) {
         if (sigs[j].blockTime && sigs[j].blockTime >= targetTime) {
           await sleep(150);
-          const tx = await rpc(SOLANA_RPC, 'getTransaction', [
+          const tx = await solanaRpc('getTransaction', [
             sigs[j].signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
           ]);
           if (tx) { const b = extractSolBal(tx, tokenAccount); if (b !== null) return b; }
