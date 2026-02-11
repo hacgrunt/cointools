@@ -40,7 +40,7 @@
     max-width: 720px; margin: 0 auto; padding: 0 1.5rem;
     overflow: hidden; max-height: 0; transition: max-height 0.3s ease;
   }
-  .settings-panel.open { max-height: 200px; }
+  .settings-panel.open { max-height: 350px; }
   .settings-inner {
     padding: 1rem 0; border-bottom: 1px solid var(--border);
   }
@@ -172,15 +172,25 @@
 
 <div class="settings-panel" id="settingsPanel">
   <div class="settings-inner">
-    <p>
-      EVM chains (Base, ETH) require a free Moralis API key.
-      <a href="https://admin.moralis.io/register" target="_blank" rel="noopener">Get one here</a> — takes 30 seconds. Solana works without a key.
+    <p style="margin-bottom:0.75rem">
+      Free API keys are needed for on-chain data. Both take 30 seconds to sign up.
     </p>
+    <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.25rem">
+      Solana RPC URL — <a href="https://dev.helius.xyz/dashboard/app" target="_blank" rel="noopener">Get free Helius key</a>, then paste: <code style="font-size:0.72rem;color:var(--cyan)">https://mainnet.helius-rpc.com/?api-key=YOUR_KEY</code>
+    </label>
+    <div class="key-row" style="margin-bottom:0.75rem">
+      <input id="solanaRpcInput" type="text" placeholder="https://mainnet.helius-rpc.com/?api-key=..." />
+      <button onclick="saveKey('cointools_solana_rpc','solanaRpcInput','solSaved')">Save</button>
+    </div>
+    <div class="key-saved" id="solSaved">Saved.</div>
+    <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.25rem">
+      Moralis API Key (for Base/ETH) — <a href="https://admin.moralis.io/register" target="_blank" rel="noopener">Get free key</a>
+    </label>
     <div class="key-row">
       <input id="moralisKeyInput" type="text" placeholder="Paste Moralis API key..." />
-      <button onclick="saveMoralisKey()">Save</button>
+      <button onclick="saveKey('cointools_moralis_key','moralisKeyInput','keySaved')">Save</button>
     </div>
-    <div class="key-saved" id="keySaved">Key saved.</div>
+    <div class="key-saved" id="keySaved">Saved.</div>
   </div>
 </div>
 
@@ -234,27 +244,31 @@ let changeChart = null, sentimentChart = null, selectedPeriod = '24h';
 
 // ── Settings ────────────────────────────────────────────────
 function getMoralisKey() { return localStorage.getItem('cointools_moralis_key') || ''; }
-function saveMoralisKey() {
-  const key = document.getElementById('moralisKeyInput').value.trim();
-  if (!key) return;
-  localStorage.setItem('cointools_moralis_key', key);
-  document.getElementById('keySaved').style.display = 'block';
+function getSolanaRpc() { return localStorage.getItem('cointools_solana_rpc') || ''; }
+function saveKey(storageKey, inputId, savedId) {
+  const val = document.getElementById(inputId).value.trim();
+  if (!val) return;
+  localStorage.setItem(storageKey, val);
+  const el = document.getElementById(savedId);
+  el.style.display = 'block';
   updateGearBadge();
-  setTimeout(() => { document.getElementById('keySaved').style.display = 'none'; }, 2000);
+  setTimeout(() => { el.style.display = 'none'; }, 2000);
 }
 function toggleSettings() {
   document.getElementById('settingsPanel').classList.toggle('open');
 }
 function updateGearBadge() {
   const btn = document.getElementById('gearBtn');
-  if (getMoralisKey()) btn.classList.add('has-key');
+  if (getMoralisKey() || getSolanaRpc()) btn.classList.add('has-key');
   else btn.classList.remove('has-key');
 }
 
-// Init: load saved key into input, update badge
+// Init: load saved values into inputs, update badge
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = getMoralisKey();
-  if (saved) document.getElementById('moralisKeyInput').value = saved;
+  const moralis = getMoralisKey();
+  const solRpc = getSolanaRpc();
+  if (moralis) document.getElementById('moralisKeyInput').value = moralis;
+  if (solRpc) document.getElementById('solanaRpcInput').value = solRpc;
   updateGearBadge();
 });
 
@@ -318,10 +332,12 @@ async function rpc(url, method, params) {
   return data.result;
 }
 
-// Solana RPC with automatic fallback across multiple endpoints
+// Solana RPC: user's custom URL first, then public fallbacks
 async function solanaRpc(method, params) {
+  const custom = getSolanaRpc();
+  const urls = custom ? [custom, ...SOLANA_RPCS] : SOLANA_RPCS;
   let lastErr;
-  for (const url of SOLANA_RPCS) {
+  for (const url of urls) {
     try {
       return await rpc(url, method, params);
     } catch (e) {
@@ -329,7 +345,9 @@ async function solanaRpc(method, params) {
       console.warn(`RPC ${url} failed for ${method}: ${e.message}`);
     }
   }
-  throw lastErr || new Error(`All Solana RPCs failed for ${method}`);
+  // All failed — open settings and show guidance
+  document.getElementById('settingsPanel').classList.add('open');
+  throw new Error('Solana RPC blocked (403). Paste a free Helius RPC URL in Settings above.');
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
