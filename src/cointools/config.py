@@ -18,6 +18,15 @@ PERIOD_SECONDS = {
     "30d": 2592000,
 }
 
+SCOUT_PERIOD_SECONDS = {
+    "1h": 3600,
+    "6h": 21600,
+    "12h": 43200,
+    "24h": 86400,
+    "3d": 259200,
+    "7d": 604800,
+}
+
 
 def _ensure_config_dir() -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -49,6 +58,26 @@ def get_rpc_url(chain: str = "solana") -> str:
 def set_rpc_url(url: str, chain: str = "solana") -> None:
     cfg = load_config()
     cfg[f"rpc_url_{chain}"] = url
+    save_config(cfg)
+
+
+def get_helius_api_key() -> str | None:
+    """Return the stored Helius API key, or try to extract from the RPC URL."""
+    cfg = load_config()
+    if cfg.get("helius_api_key"):
+        return cfg["helius_api_key"]
+    # Try to extract from Solana RPC URL (helius URLs embed the key)
+    rpc = get_rpc_url("solana")
+    if "helius" in rpc and "api-key=" in rpc:
+        return rpc.split("api-key=")[-1].split("&")[0]
+    if "helius" in rpc and "?" in rpc:
+        return rpc.split("?")[-1].split("&")[0]
+    return None
+
+
+def set_helius_api_key(key: str) -> None:
+    cfg = load_config()
+    cfg["helius_api_key"] = key
     save_config(cfg)
 
 

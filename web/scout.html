@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cointools Scout — Smart Money Token Discovery</title>
+<style>
+  :root {
+    --bg: #09090b; --surface: #18181b; --border: #27272a; --muted: #71717a;
+    --text: #e4e4e7; --green: #22c55e; --red: #ef4444; --blue: #3b82f6;
+    --yellow: #eab308; --cyan: #06b6d4; --purple: #a855f7; --orange: #f97316;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ── Header ── */
+  .header {
+    border-bottom: 1px solid var(--border); padding: 1.2rem 2rem;
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .header h1 { font-size: 1.1rem; font-weight: 600; }
+  .header .tag {
+    font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+  .header .spacer { flex: 1; }
+  .gear-btn {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); padding: 0.35rem 0.6rem; cursor: pointer; font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .gear-btn:hover { color: var(--text); border-color: var(--muted); }
+  .gear-btn.has-key { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+
+  /* ── Settings Panel ── */
+  .settings-panel {
+    max-width: 900px; margin: 0 auto; padding: 0 1.5rem;
+    overflow: hidden; max-height: 0; transition: max-height 0.3s ease;
+  }
+  .settings-panel.open { max-height: 300px; }
+  .settings-inner { padding: 1rem 0; border-bottom: 1px solid var(--border); }
+  .settings-inner p { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .settings-inner a { color: var(--cyan); }
+  .key-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .key-row label { font-size: 0.78rem; color: var(--muted); min-width: 100px; align-self: center; }
+  .key-row input {
+    flex: 1; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-family: monospace; outline: none;
+  }
+  .key-row input:focus { border-color: var(--muted); }
+  .key-row button {
+    padding: 0.5rem 1rem; border-radius: 6px; border: none; font-size: 0.8rem;
+    background: var(--green); color: #000; font-weight: 600; cursor: pointer;
+  }
+
+  /* ── Main layout ── */
+  .main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+  /* ── Wallet management ── */
+  .wallets-section { margin-bottom: 1.5rem; }
+  .section-header {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;
+  }
+  .section-header h2 { font-size: 0.9rem; font-weight: 600; }
+  .section-header .count {
+    font-size: 0.72rem; padding: 0.1rem 0.5rem; border-radius: 999px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+  .wallet-add-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .wallet-add-row input {
+    padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-family: monospace; outline: none;
+  }
+  .wallet-add-row input:focus { border-color: var(--muted); }
+  .wallet-add-row input.addr { flex: 2; }
+  .wallet-add-row input.label { flex: 1; }
+  .wallet-add-row input::placeholder { font-family: sans-serif; color: var(--muted); }
+  .btn {
+    padding: 0.5rem 1rem; border-radius: 6px; border: none; font-size: 0.82rem;
+    font-weight: 600; cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: #fff; color: #000; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: transparent; color: var(--red); border: 1px solid color-mix(in srgb, var(--red) 40%, transparent); padding: 0.25rem 0.6rem; font-size: 0.72rem; }
+
+  .wallet-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .wallet-chip {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.35rem 0.6rem 0.35rem 0.75rem; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border); font-size: 0.78rem;
+  }
+  .wallet-chip .wc-label { color: var(--cyan); font-weight: 500; }
+  .wallet-chip .wc-addr { font-family: monospace; color: var(--muted); font-size: 0.72rem; }
+  .wallet-chip .wc-remove {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 0.8rem; padding: 0.1rem 0.2rem; line-height: 1;
+  }
+  .wallet-chip .wc-remove:hover { color: var(--red); }
+
+  /* ── Scan controls ── */
+  .scan-controls {
+    display: flex; gap: 1rem; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .pill-group { display: flex; }
+  .pill-group button {
+    padding: 0.35rem 0.7rem; font-size: 0.78rem; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .pill-group button:first-child { border-radius: 6px 0 0 6px; }
+  .pill-group button:last-child { border-radius: 0 6px 6px 0; }
+  .pill-group button:not(:first-child) { border-left: none; }
+  .pill-group button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .status-line { font-size: 0.8rem; color: var(--muted); min-height: 1.2rem; margin-bottom: 1rem; }
+  .status-line.error { color: var(--red); }
+
+  /* ── Token feed table ── */
+  .feed-table {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .feed-table th {
+    text-align: left; padding: 0.6rem 0.7rem;
+    background: color-mix(in srgb, var(--surface) 80%, var(--border));
+    color: var(--muted); font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600; white-space: nowrap;
+  }
+  .feed-table td {
+    padding: 0.55rem 0.7rem; border-top: 1px solid var(--border); font-size: 0.82rem;
+    vertical-align: middle;
+  }
+  .feed-table tr:hover td { background: color-mix(in srgb, var(--surface) 50%, var(--border)); }
+  .feed-table .r { text-align: right; font-family: monospace; }
+  .feed-table .c { text-align: center; }
+  .mono { font-family: monospace; font-size: 0.78rem; }
+
+  .token-name { font-weight: 700; }
+  .token-sub { font-size: 0.72rem; color: var(--muted); }
+  .mint-link { color: var(--cyan); font-family: monospace; font-size: 0.7rem; cursor: pointer; }
+  .mint-link:hover { opacity: 0.7; }
+
+  .badge {
+    display: inline-block; padding: 0.12rem 0.5rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 700;
+  }
+  .badge-green { background: color-mix(in srgb, var(--green) 20%, transparent); color: var(--green); }
+  .badge-red { background: color-mix(in srgb, var(--red) 20%, transparent); color: var(--red); }
+  .badge-yellow { background: color-mix(in srgb, var(--yellow) 20%, transparent); color: var(--yellow); }
+
+  .buyers-cell { color: var(--green); font-weight: 700; font-family: monospace; }
+  .buyers-high { color: var(--green); font-size: 1rem; }
+  .net-positive { color: var(--green); }
+  .net-negative { color: var(--red); }
+  .who-list { font-size: 0.72rem; color: var(--cyan); }
+
+  /* ── Summary cards ── */
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem; margin-bottom: 1.25rem;
+  }
+  .summary-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+  }
+  .summary-card .sc-label {
+    font-size: 0.68rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 0.2rem;
+  }
+  .summary-card .sc-value {
+    font-size: 1.15rem; font-weight: 700; font-family: monospace;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center; padding: 3rem; color: var(--muted); font-size: 0.9rem;
+  }
+  .empty-state h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
+
+  /* ── Activity stream ── */
+  .activity-section { margin-top: 2rem; }
+  .activity-table {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .activity-table th {
+    text-align: left; padding: 0.5rem 0.7rem;
+    background: color-mix(in srgb, var(--surface) 80%, var(--border));
+    color: var(--muted); font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600;
+  }
+  .activity-table td {
+    padding: 0.4rem 0.7rem; border-top: 1px solid var(--border); font-size: 0.78rem;
+  }
+  .activity-table tr:hover td { background: color-mix(in srgb, var(--surface) 50%, var(--border)); }
+  .type-buy { color: var(--green); font-weight: 700; }
+  .type-sell { color: var(--red); font-weight: 700; }
+
+  @media (max-width: 768px) {
+    .main { padding: 1rem; }
+    .wallet-add-row { flex-wrap: wrap; }
+    .wallet-add-row input.addr, .wallet-add-row input.label { flex: 1 1 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <h1>Cointools Scout</h1>
+  <span class="tag">Solana</span>
+  <span class="tag">Smart Money</span>
+  <div class="spacer"></div>
+  <button class="gear-btn" id="settingsBtn" onclick="toggleSettings()">Settings</button>
+</div>
+
+<!-- ── Settings ── -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-inner">
+    <p>Helius API key — required for wallet transaction scanning.
+       <a href="https://dev.helius.xyz" target="_blank">Get a free key</a></p>
+    <div class="key-row">
+      <input id="heliusKeyInput" type="password" placeholder="Your Helius API key">
+      <button onclick="saveHeliusKey()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+
+  <!-- Wallet Management -->
+  <div class="wallets-section">
+    <div class="section-header">
+      <h2>Tracked Wallets</h2>
+      <span class="count" id="walletCount">0</span>
+    </div>
+    <div class="wallet-add-row">
+      <input class="addr" id="walletAddrInput" placeholder="Wallet address (Solana)">
+      <input class="label" id="walletLabelInput" placeholder="Label (optional)">
+      <button class="btn btn-green" onclick="addWallet()">Add</button>
+    </div>
+    <div class="wallet-list" id="walletList"></div>
+  </div>
+
+  <!-- Scan Controls -->
+  <div class="scan-controls">
+    <div class="pill-group" id="periodPills"></div>
+    <button class="btn btn-primary" id="scanBtn" onclick="runScan()">Scan</button>
+  </div>
+
+  <div class="status-line" id="statusLine"></div>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid" id="summaryGrid" style="display:none;"></div>
+
+  <!-- Token Feed -->
+  <div id="feedContainer"></div>
+
+  <!-- Activity Stream -->
+  <div class="activity-section" id="activitySection" style="display:none;">
+    <div class="section-header" style="margin-top:1rem;">
+      <h2>Activity Stream</h2>
+      <span class="count" id="activityCount">0</span>
+    </div>
+    <div id="activityContainer"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+const PERIODS = ['1h','6h','12h','24h','3d','7d'];
+const PERIOD_SECONDS = { '1h':3600, '6h':21600, '12h':43200, '24h':86400, '3d':259200, '7d':604800 };
+
+const STABLECOINS = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',  // USDT
+]);
+const WRAPPED_SOL = 'So11111111111111111111111111111111111111112';
+const BASE_TOKENS = new Set([WRAPPED_SOL, ...STABLECOINS]);
+const MIN_TRADE_SOL = 0.01;
+const MIN_LIQUIDITY_USD = 1000;
+
+let state = {
+  wallets: JSON.parse(localStorage.getItem('scout_wallets') || '[]'),
+  apiKey: localStorage.getItem('scout_helius_key') || '',
+  period: '24h',
+  scanning: false,
+};
+
+// ── Init ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderPeriodPills();
+  renderWallets();
+  updateSettingsBtn();
+  if (state.apiKey) {
+    document.getElementById('heliusKeyInput').value = state.apiKey;
+  }
+});
+
+// ── Settings ───────────────────────────────────────────────────────────
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('open');
+}
+
+function saveHeliusKey() {
+  const key = document.getElementById('heliusKeyInput').value.trim();
+  if (!key) return;
+  state.apiKey = key;
+  localStorage.setItem('scout_helius_key', key);
+  updateSettingsBtn();
+  toggleSettings();
+}
+
+function updateSettingsBtn() {
+  const btn = document.getElementById('settingsBtn');
+  if (state.apiKey) {
+    btn.classList.add('has-key');
+    btn.textContent = 'Settings';
+  } else {
+    btn.classList.remove('has-key');
+    btn.textContent = 'Settings';
+  }
+}
+
+// ── Period Pills ───────────────────────────────────────────────────────
+function renderPeriodPills() {
+  const container = document.getElementById('periodPills');
+  container.innerHTML = PERIODS.map(p =>
+    `<button class="${p === state.period ? 'active' : ''}" onclick="setPeriod('${p}')">${p.toUpperCase()}</button>`
+  ).join('');
+}
+
+function setPeriod(p) {
+  state.period = p;
+  renderPeriodPills();
+}
+
+// ── Wallet Management ──────────────────────────────────────────────────
+function addWallet() {
+  const addr = document.getElementById('walletAddrInput').value.trim();
+  const label = document.getElementById('walletLabelInput').value.trim();
+  if (!addr) return;
+  if (state.wallets.some(w => w.address === addr)) {
+    setStatus('Wallet already tracked.', true);
+    return;
+  }
+  state.wallets.push({ address: addr, label: label || null });
+  saveWallets();
+  renderWallets();
+  document.getElementById('walletAddrInput').value = '';
+  document.getElementById('walletLabelInput').value = '';
+}
+
+function removeWallet(addr) {
+  state.wallets = state.wallets.filter(w => w.address !== addr);
+  saveWallets();
+  renderWallets();
+}
+
+function saveWallets() {
+  localStorage.setItem('scout_wallets', JSON.stringify(state.wallets));
+}
+
+function renderWallets() {
+  const container = document.getElementById('walletList');
+  document.getElementById('walletCount').textContent = state.wallets.length;
+  if (!state.wallets.length) {
+    container.innerHTML = '<span style="color:var(--muted);font-size:0.8rem;">No wallets tracked. Add one above.</span>';
+    return;
+  }
+  container.innerHTML = state.wallets.map(w => {
+    const short = w.address.slice(0,6) + '..' + w.address.slice(-4);
+    const lbl = w.label || short;
+    return `<div class="wallet-chip">
+      <span class="wc-label">${esc(lbl)}</span>
+      <span class="wc-addr">${short}</span>
+      <button class="wc-remove" onclick="removeWallet('${w.address}')" title="Remove">&times;</button>
+    </div>`;
+  }).join('');
+}
+
+// ── Scan ───────────────────────────────────────────────────────────────
+async function runScan() {
+  if (state.scanning) return;
+  if (!state.apiKey) {
+    setStatus('Set your Helius API key in Settings first.', true);
+    toggleSettings();
+    return;
+  }
+  if (!state.wallets.length) {
+    setStatus('Add at least one wallet to track.', true);
+    return;
+  }
+
+  state.scanning = true;
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+
+  const since = Math.floor(Date.now() / 1000) - PERIOD_SECONDS[state.period];
+  const allTrades = [];
+
+  try {
+    // Scan each wallet
+    for (let i = 0; i < state.wallets.length; i++) {
+      const w = state.wallets[i];
+      const lbl = w.label || w.address.slice(0,8) + '..';
+      setStatus(`Scanning wallet ${i+1}/${state.wallets.length}: ${lbl}...`);
+      const trades = await scanWallet(w.address, since);
+      allTrades.push(...trades);
+    }
+
+    setStatus(`Parsed ${allTrades.length} trades. Fetching token metadata...`);
+
+    // Aggregate by token
+    const aggregated = aggregateTrades(allTrades);
+    const mints = aggregated.map(a => a.token_mint);
+
+    // Fetch metadata
+    let metadata = {};
+    if (mints.length > 0) {
+      metadata = await fetchTokenMetadata(mints);
+    }
+
+    // Build feed
+    const feed = buildFeed(aggregated, metadata, allTrades);
+
+    // Render
+    renderSummary(allTrades, feed);
+    renderFeed(feed);
+    renderActivity(allTrades);
+    setStatus(`Done. ${allTrades.length} trades across ${feed.length} tokens.`);
+
+  } catch (err) {
+    setStatus(`Error: ${err.message}`, true);
+    console.error(err);
+  } finally {
+    state.scanning = false;
+    btn.disabled = false;
+    btn.textContent = 'Scan';
+  }
+}
+
+// ── Helius API ─────────────────────────────────────────────────────────
+async function scanWallet(address, sinceTimestamp) {
+  const trades = [];
+  let beforeSig = null;
+  const maxPages = 5;
+
+  for (let page = 0; page < maxPages; page++) {
+    let url = `https://api.helius.xyz/v0/addresses/${address}/transactions?api-key=${state.apiKey}&type=SWAP`;
+    if (beforeSig) url += `&before=${beforeSig}`;
+
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      if (resp.status === 429) {
+        await sleep(2000);
+        continue;
+      }
+      throw new Error(`Helius API error ${resp.status} for ${address.slice(0,8)}..`);
+    }
+    const txs = await resp.json();
+    if (!txs.length) break;
+
+    let reachedCutoff = false;
+    for (const tx of txs) {
+      const ts = tx.timestamp || 0;
+      if (ts < sinceTimestamp) { reachedCutoff = true; break; }
+      const parsed = parseSwapTx(tx, address);
+      trades.push(...parsed);
+    }
+    if (reachedCutoff) break;
+    beforeSig = txs[txs.length - 1]?.signature;
+
+    await sleep(120);
+  }
+  return trades;
+}
+
+function parseSwapTx(tx, walletAddress) {
+  const swap = tx.events?.swap;
+  if (!swap) return [];
+
+  const sig = tx.signature || '';
+  const ts = tx.timestamp || 0;
+  const source = tx.source || 'UNKNOWN';
+  const trades = [];
+
+  // SOL amount
+  let solAmount = 0;
+  if (swap.nativeInput) solAmount = parseInt(swap.nativeInput.amount || 0) / 1e9;
+  else if (swap.nativeOutput) solAmount = parseInt(swap.nativeOutput.amount || 0) / 1e9;
+
+  let stableAmount = 0;
+
+  // Token inputs (wallet sent these = SELL)
+  for (const token of (swap.tokenInputs || [])) {
+    const mint = token.mint || '';
+    const raw = token.rawTokenAmount || {};
+    const dec = parseInt(raw.decimals || 0);
+    const amt = dec ? parseInt(raw.tokenAmount || '0') / Math.pow(10, dec) : 0;
+    if (BASE_TOKENS.has(mint)) { stableAmount = amt; continue; }
+    trades.push({
+      wallet_address: walletAddress, signature: sig, timestamp: ts,
+      trade_type: 'SELL', token_mint: mint, token_amount: amt,
+      sol_amount: solAmount || stableAmount, source
+    });
+  }
+
+  // Token outputs (wallet received these = BUY)
+  for (const token of (swap.tokenOutputs || [])) {
+    const mint = token.mint || '';
+    const raw = token.rawTokenAmount || {};
+    const dec = parseInt(raw.decimals || 0);
+    const amt = dec ? parseInt(raw.tokenAmount || '0') / Math.pow(10, dec) : 0;
+    if (BASE_TOKENS.has(mint)) continue;
+    trades.push({
+      wallet_address: walletAddress, signature: sig, timestamp: ts,
+      trade_type: 'BUY', token_mint: mint, token_amount: amt,
+      sol_amount: solAmount || stableAmount, source
+    });
+  }
+
+  return trades.filter(t => Math.abs(t.sol_amount) >= MIN_TRADE_SOL);
+}
+
+// ── DexScreener API ────────────────────────────────────────────────────
+async function fetchTokenMetadata(mints) {
+  const result = {};
+  const batchSize = 30;
+
+  for (let i = 0; i < mints.length; i += batchSize) {
+    const batch = mints.slice(i, i + batchSize);
+    const url = `https://api.dexscreener.com/latest/dex/tokens/${batch.join(',')}`;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const pairs = data.pairs || [];
+
+      // Group by base token mint
+      const byMint = {};
+      for (const pair of pairs) {
+        const mint = pair.baseToken?.address;
+        if (mint && batch.includes(mint)) {
+          if (!byMint[mint]) byMint[mint] = [];
+          byMint[mint].push(pair);
+        }
+      }
+
+      for (const [mint, mintPairs] of Object.entries(byMint)) {
+        const solanaPairs = mintPairs.filter(p => p.chainId === 'solana');
+        const candidates = solanaPairs.length ? solanaPairs : mintPairs;
+        const best = candidates.reduce((a, b) =>
+          parseFloat(a.liquidity?.usd || 0) >= parseFloat(b.liquidity?.usd || 0) ? a : b
+        );
+        result[mint] = {
+          name: best.baseToken?.name || 'Unknown',
+          symbol: best.baseToken?.symbol || '???',
+          price_usd: parseFloat(best.priceUsd || 0),
+          market_cap: parseFloat(best.marketCap || best.fdv || 0),
+          liquidity_usd: parseFloat(best.liquidity?.usd || 0),
+          volume_24h: parseFloat(best.volume?.h24 || 0),
+          pair_url: best.url || '',
+          dex: best.dexId || '',
+        };
+      }
+    } catch (e) { console.warn('DexScreener fetch error:', e); }
+    if (i + batchSize < mints.length) await sleep(300);
+  }
+  return result;
+}
+
+// ── Aggregation ────────────────────────────────────────────────────────
+function aggregateTrades(trades) {
+  const byToken = {};
+  for (const t of trades) {
+    const m = t.token_mint;
+    if (!byToken[m]) {
+      byToken[m] = {
+        token_mint: m, buy_count: 0, sell_count: 0,
+        buyers: new Set(), sellers: new Set(),
+        total_sol_in: 0, total_sol_out: 0,
+        first_seen: t.timestamp, last_seen: t.timestamp,
+      };
+    }
+    const agg = byToken[m];
+    if (t.trade_type === 'BUY') {
+      agg.buy_count++;
+      agg.buyers.add(t.wallet_address);
+      agg.total_sol_in += t.sol_amount;
+    } else {
+      agg.sell_count++;
+      agg.sellers.add(t.wallet_address);
+      agg.total_sol_out += t.sol_amount;
+    }
+    agg.first_seen = Math.min(agg.first_seen, t.timestamp);
+    agg.last_seen = Math.max(agg.last_seen, t.timestamp);
+  }
+  return Object.values(byToken).map(a => ({
+    ...a,
+    unique_buyers: a.buyers.size,
+    unique_sellers: a.sellers.size,
+    buyer_addrs: [...a.buyers],
+    seller_addrs: [...a.sellers],
+  })).sort((a, b) => b.unique_buyers - a.unique_buyers || b.total_sol_in - a.total_sol_in);
+}
+
+function buildFeed(aggregated, metadata, allTrades) {
+  const walletLabels = {};
+  for (const w of state.wallets) {
+    walletLabels[w.address] = w.label || (w.address.slice(0,6) + '..' + w.address.slice(-4));
+  }
+
+  return aggregated
+    .map(agg => {
+      const meta = metadata[agg.token_mint] || {};
+      const liq = meta.liquidity_usd || 0;
+      if (meta.name && liq < MIN_LIQUIDITY_USD) return null;
+
+      const buyerLabels = agg.buyer_addrs.map(a => walletLabels[a] || a.slice(0,6)+'..');
+      const sellerLabels = agg.seller_addrs.map(a => walletLabels[a] || a.slice(0,6)+'..');
+      const netFlow = agg.total_sol_in - agg.total_sol_out;
+      const conviction = agg.unique_buyers * 10 + Math.min(agg.total_sol_in, 100) + (netFlow > 0 ? 5 : -5);
+
+      return {
+        ...agg, ...meta,
+        token_mint: agg.token_mint,
+        name: meta.name || 'Unknown',
+        symbol: meta.symbol || agg.token_mint.slice(0,8)+'..',
+        price_usd: meta.price_usd || 0,
+        market_cap: meta.market_cap || 0,
+        liquidity_usd: liq,
+        volume_24h: meta.volume_24h || 0,
+        pair_url: meta.pair_url || '',
+        buyer_labels: buyerLabels,
+        seller_labels: sellerLabels,
+        net_flow: netFlow,
+        conviction,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.conviction - a.conviction);
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────
+function renderSummary(trades, feed) {
+  const grid = document.getElementById('summaryGrid');
+  grid.style.display = 'grid';
+
+  const totalBuys = trades.filter(t => t.trade_type === 'BUY').length;
+  const totalSells = trades.filter(t => t.trade_type === 'SELL').length;
+  const solIn = trades.filter(t => t.trade_type === 'BUY').reduce((s, t) => s + t.sol_amount, 0);
+  const solOut = trades.filter(t => t.trade_type === 'SELL').reduce((s, t) => s + t.sol_amount, 0);
+  const multiWallet = feed.filter(f => f.unique_buyers >= 2).length;
+
+  grid.innerHTML = `
+    <div class="summary-card">
+      <div class="sc-label">Total Trades</div>
+      <div class="sc-value">${trades.length}</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Buys / Sells</div>
+      <div class="sc-value"><span style="color:var(--green)">${totalBuys}</span> / <span style="color:var(--red)">${totalSells}</span></div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">SOL In / Out</div>
+      <div class="sc-value"><span style="color:var(--green)">${fmtSol(solIn)}</span> / <span style="color:var(--red)">${fmtSol(solOut)}</span></div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Multi-Wallet Tokens</div>
+      <div class="sc-value" style="color:var(--cyan)">${multiWallet}</div>
+    </div>
+    <div class="summary-card">
+      <div class="sc-label">Unique Tokens</div>
+      <div class="sc-value">${feed.length}</div>
+    </div>
+  `;
+}
+
+function renderFeed(feed) {
+  const container = document.getElementById('feedContainer');
+  if (!feed.length) {
+    container.innerHTML = '<div class="empty-state"><h3>No tokens found</h3>No swap activity from tracked wallets in this period.</div>';
+    return;
+  }
+
+  let html = `<table class="feed-table">
+    <thead><tr>
+      <th>#</th><th>Token</th><th class="r">Price</th><th class="r">MCap</th>
+      <th class="r">Liquidity</th><th class="c">Buyers</th><th class="r">SOL In</th>
+      <th class="r">Net Flow</th><th>Last</th><th>Who Bought</th>
+    </tr></thead><tbody>`;
+
+  feed.forEach((s, i) => {
+    const mintShort = s.token_mint.slice(0,6) + '..' + s.token_mint.slice(-4);
+    const solscanUrl = `https://solscan.io/token/${s.token_mint}`;
+    const netClass = s.net_flow > 0 ? 'net-positive' : s.net_flow < 0 ? 'net-negative' : '';
+    const netPrefix = s.net_flow > 0 ? '+' : '';
+    const buyersClass = s.unique_buyers >= 3 ? 'buyers-high' : '';
+    const who = s.buyer_labels.slice(0, 4).map(esc).join(', ') +
+      (s.buyer_labels.length > 4 ? ` +${s.buyer_labels.length - 4}` : '');
+
+    // Pair URL or Solscan fallback
+    const tokenLink = s.pair_url || solscanUrl;
+
+    html += `<tr>
+      <td class="r" style="color:var(--muted)">${i + 1}</td>
+      <td>
+        <a href="${tokenLink}" target="_blank" style="color:inherit">
+          <span class="token-name">${esc(s.symbol)}</span>
+          <span class="token-sub">${esc(s.name.slice(0, 20))}</span>
+        </a><br>
+        <a href="${solscanUrl}" target="_blank" class="mint-link">${mintShort}</a>
+      </td>
+      <td class="r mono">${fmtUsd(s.price_usd)}</td>
+      <td class="r mono">${fmtUsd(s.market_cap)}</td>
+      <td class="r mono">${fmtUsd(s.liquidity_usd)}</td>
+      <td class="c buyers-cell ${buyersClass}">${s.unique_buyers}</td>
+      <td class="r mono" style="color:var(--green)">${fmtSol(s.total_sol_in)}</td>
+      <td class="r mono ${netClass}">${netPrefix}${fmtSol(Math.abs(s.net_flow))}</td>
+      <td class="mono" style="color:var(--muted)">${timeAgo(s.last_seen)}</td>
+      <td class="who-list">${who}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+function renderActivity(trades) {
+  const section = document.getElementById('activitySection');
+  const container = document.getElementById('activityContainer');
+  document.getElementById('activityCount').textContent = trades.length;
+
+  if (!trades.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+
+  // Sort by timestamp descending, show last 100
+  const sorted = [...trades].sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
+  const walletLabels = {};
+  for (const w of state.wallets) {
+    walletLabels[w.address] = w.label || (w.address.slice(0,6) + '..' + w.address.slice(-4));
+  }
+
+  let html = `<table class="activity-table">
+    <thead><tr>
+      <th>Time</th><th>Wallet</th><th>Type</th><th>Token</th>
+      <th class="r">SOL</th><th>Source</th><th>Tx</th>
+    </tr></thead><tbody>`;
+
+  for (const t of sorted) {
+    const wLabel = esc(walletLabels[t.wallet_address] || t.wallet_address.slice(0,8)+'..');
+    const typeClass = t.trade_type === 'BUY' ? 'type-buy' : 'type-sell';
+    const mintShort = t.token_mint.slice(0,6) + '..' + t.token_mint.slice(-4);
+    const txShort = t.signature.slice(0,8) + '..';
+    const txUrl = `https://solscan.io/tx/${t.signature}`;
+    const tokenUrl = `https://solscan.io/token/${t.token_mint}`;
+
+    html += `<tr>
+      <td class="mono" style="color:var(--muted)">${timeAgo(t.timestamp)}</td>
+      <td style="color:var(--cyan)">${wLabel}</td>
+      <td class="${typeClass}">${t.trade_type}</td>
+      <td><a href="${tokenUrl}" target="_blank" class="mint-link">${mintShort}</a></td>
+      <td class="r mono">${fmtSol(t.sol_amount)}</td>
+      <td class="mono" style="color:var(--muted);font-size:0.7rem">${esc(t.source)}</td>
+      <td><a href="${txUrl}" target="_blank" class="mint-link">${txShort}</a></td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+}
+
+// ── Formatters ─────────────────────────────────────────────────────────
+function fmtUsd(v) {
+  if (v >= 1e9) return '$' + (v/1e9).toFixed(1) + 'B';
+  if (v >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return '$' + (v/1e3).toFixed(1) + 'K';
+  if (v >= 1) return '$' + v.toFixed(2);
+  if (v > 0) return '$' + v.toFixed(6);
+  return '$0';
+}
+
+function fmtSol(v) {
+  if (v >= 1000) return v.toFixed(0) + ' SOL';
+  if (v >= 1) return v.toFixed(2) + ' SOL';
+  if (v > 0) return v.toFixed(4) + ' SOL';
+  return '0 SOL';
+}
+
+function timeAgo(ts) {
+  const diff = Math.floor(Date.now()/1000) - ts;
+  if (diff < 0) return 'now';
+  if (diff < 60) return diff + 's';
+  if (diff < 3600) return Math.floor(diff/60) + 'm';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h';
+  return Math.floor(diff/86400) + 'd';
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('statusLine');
+  el.textContent = msg;
+  el.className = 'status-line' + (isError ? ' error' : '');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
