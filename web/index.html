@@ -158,6 +158,7 @@
     color: var(--muted); margin-left: 0.35rem;
   }
   .wallet-tag.contract { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 30%, transparent); }
+  .wallet-tag.lp { color: var(--purple); border-color: color-mix(in srgb, var(--purple) 30%, transparent); }
   .pct-bar {
     display: inline-block; height: 4px; border-radius: 2px; background: var(--cyan);
     vertical-align: middle; margin-right: 0.4rem; opacity: 0.6; min-width: 2px;
@@ -353,6 +354,20 @@ const MORALIS_CHAINS = { base: '0x2105', eth: '0x1' };
 const PERIODS = { '1h': 3600, '6h': 21600, '12h': 43200, '24h': 86400, '3d': 259200, '7d': 604800 };
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
+// Known Solana AMM/DEX programs whose PDAs hold LP token accounts
+const SOLANA_AMM_PROGRAMS = new Set([
+  '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium V4
+  'CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK', // Raydium CLMM
+  '5quBtoiQqxF9Jv6KYKctB59NT3gtJD2Y65kdnB1Uev3h', // Raydium V3
+  'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',   // Orca Whirlpool
+  '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP', // Orca Token Swap V2
+  'LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo',   // Meteora DLMM
+  'Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB',  // Meteora Pools
+  'SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ',    // Saber
+  'FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X',  // FluxBeam
+  'PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY',   // Phoenix
+]);
+
 const SIG = {
   STRONG_BUY:  { label: 'STRONG BUY',  color: '#16a34a' },
   BUY:         { label: 'BUY',          color: '#22c55e' },
@@ -362,6 +377,9 @@ const SIG = {
   EXIT:        { label: 'EXIT',         color: '#7f1d1d' },
   FRESH:       { label: 'FRESH WALLET', color: '#3b82f6' },
   NEW:         { label: 'NEW',          color: '#6366f1' },
+  LP_ADD:      { label: 'LP ADD',       color: '#a855f7' },
+  LP_REMOVE:   { label: 'LP REMOVE',    color: '#7c3aed' },
+  LP_HOLD:     { label: 'LP HOLD',      color: '#4c1d95' },
 };
 const EXPLORER = {
   solana: addr => `https://solscan.io/account/${addr}`,
@@ -485,6 +503,21 @@ async function analyzeSolana(mint, periodSecs) {
     } catch (_) {}
     if (i % 5 === 4) await sleep(150);
   }
+
+  // Detect LP wallets: check if owner account is owned by a known AMM program
+  setStatus('Detecting LP/DEX wallets...');
+  for (let i = 0; i < holders.length; i++) {
+    if (!holders[i].owner) continue;
+    try {
+      const ownerInfo = await solanaRpc('getAccountInfo', [holders[i].owner, { encoding: 'base64', dataSlice: { offset: 0, length: 0 } }]);
+      if (ownerInfo?.value?.owner && SOLANA_AMM_PROGRAMS.has(ownerInfo.value.owner)) {
+        holders[i].walletType = 'lp';
+      } else if (ownerInfo?.value?.executable) {
+        holders[i].walletType = 'program';
+      }
+    } catch (_) {}
+    if (i % 5 === 4) await sleep(150);
+  }
   const targetTime = Math.floor(Date.now() / 1000) - periodSecs;
   for (let i = 0; i < holders.length; i++) {
     setStatus(`History ${i + 1}/${holders.length}...`);
@@ -495,7 +528,8 @@ async function analyzeSolana(mint, periodSecs) {
     meta,
     holders: holders.map(h => ({
       rank: h.rank, holderAddress: h.tokenAccount, ownerAddress: h.owner || h.tokenAccount,
-      currentBalance: h.currentBalance, historicalBalance: h.historicalBalance, isContract: h.isContract,
+      currentBalance: h.currentBalance, historicalBalance: h.historicalBalance,
+      isContract: h.isContract, walletType: h.walletType || 'wallet',
     })),
   };
 }
@@ -593,12 +627,24 @@ async function analyzeEVM(contract, chain, periodSecs) {
     let bal = 0;
     try { bal = Number(BigInt(h.balance || '0')) / (10 ** decimals); }
     catch (_) { try { bal = parseFloat(h.balance_formatted || '0'); } catch (_) {} }
-    return { rank: i + 1, holderAddress: h.owner_address, ownerAddress: h.owner_address, currentBalance: bal, historicalBalance: null, isContract: false };
+    return { rank: i + 1, holderAddress: h.owner_address, ownerAddress: h.owner_address, currentBalance: bal, historicalBalance: null, isContract: false, walletType: 'wallet' };
   });
-  setStatus('Checking wallet types...');
-  for (let i = 0; i < Math.min(holders.length, 5); i++) {
-    holders[i].isContract = await isEvmContract(holders[i].holderAddress, evmRpc);
-    if (i % 2 === 1) await sleep(100);
+  // Check all holders for contract status and LP detection
+  setStatus('Detecting LP/contract wallets...');
+  for (let i = 0; i < holders.length; i++) {
+    try {
+      const code = await rpc(evmRpc, 'eth_getCode', [holders[i].holderAddress, 'latest']);
+      if (code && code !== '0x' && code !== '0x0') {
+        holders[i].isContract = true;
+        holders[i].walletType = 'contract';
+        // Try token0() — if it responds, this is a Uniswap-style LP pair
+        try {
+          const t0 = await rpc(evmRpc, 'eth_call', [{ to: holders[i].holderAddress, data: '0x0dfe1681' }, 'latest']);
+          if (t0 && t0 !== '0x' && t0.length >= 66) holders[i].walletType = 'lp';
+        } catch (_) {}
+      }
+    } catch (_) {}
+    if (i % 4 === 3) await sleep(100);
   }
   setStatus('Getting current block...');
   const blockHex = await rpc(evmRpc, 'eth_blockNumber', []);
@@ -622,17 +668,19 @@ function classify(holders, totalSupply) {
   return holders.map(h => {
     const cur = h.currentBalance, hist = h.historicalBalance;
     const pctSupply = totalSupply > 0 ? (cur / totalSupply) * 100 : null;
+    const isLP = h.walletType === 'lp';
     let signal, change = null, changePct = null;
-    if (hist == null) { signal = 'NEW'; }
-    else if (hist === 0 && cur > 0) { signal = 'FRESH'; change = cur; }
-    else if (cur === 0 && hist > 0) { signal = 'EXIT'; change = -hist; changePct = -100; }
+    if (hist == null) { signal = isLP ? 'LP_HOLD' : 'NEW'; }
+    else if (hist === 0 && cur > 0) { signal = isLP ? 'LP_ADD' : 'FRESH'; change = cur; }
+    else if (cur === 0 && hist > 0) { signal = isLP ? 'LP_REMOVE' : 'EXIT'; change = -hist; changePct = -100; }
     else {
       change = cur - hist;
       const eps = Math.max(cur, hist, 1) * 1e-9;
-      if (Math.abs(change) < eps) { signal = 'HOLD'; change = 0; }
+      if (Math.abs(change) < eps) { signal = isLP ? 'LP_HOLD' : 'HOLD'; change = 0; }
       else {
         changePct = hist !== 0 ? (change / hist) * 100 : null;
-        if (change > 0) signal = (changePct !== null && changePct >= 50) ? 'STRONG_BUY' : 'BUY';
+        if (isLP) { signal = change > 0 ? 'LP_ADD' : 'LP_REMOVE'; }
+        else if (change > 0) signal = (changePct !== null && changePct >= 50) ? 'STRONG_BUY' : 'BUY';
         else signal = (changePct !== null && changePct <= -50) ? 'STRONG_SELL' : 'SELL';
       }
     }
@@ -644,8 +692,10 @@ function computeAnalytics(classified) {
   const top5 = classified.slice(0, 5).reduce((s, h) => s + (h.pctSupply || 0), 0);
   const top10 = classified.slice(0, 10).reduce((s, h) => s + (h.pctSupply || 0), 0);
   const top20 = classified.reduce((s, h) => s + (h.pctSupply || 0), 0);
-  let netFlow = 0, totalBought = 0, totalSold = 0, buying = 0, selling = 0, holding = 0, fresh = 0, exits = 0;
+  let netFlow = 0, totalBought = 0, totalSold = 0, buying = 0, selling = 0, holding = 0, fresh = 0, exits = 0, lpCount = 0;
   for (const h of classified) {
+    const isLP = h.walletType === 'lp';
+    if (isLP) { lpCount++; continue; } // Exclude LPs from pressure/sentiment
     if (h.change != null) { netFlow += h.change; if (h.change > 0) totalBought += h.change; else totalSold += Math.abs(h.change); }
     if (h.signal === 'STRONG_BUY' || h.signal === 'BUY') buying++;
     else if (h.signal === 'STRONG_SELL' || h.signal === 'SELL') selling++;
@@ -665,7 +715,7 @@ function computeAnalytics(classified) {
   else if (ratio >= 0.67) { pressure = 'NEUTRAL'; pressureColor = '#eab308'; }
   else if (ratio >= 0.33) { pressure = 'SELL LEAN'; pressureColor = '#ef4444'; }
   else { pressure = 'HEAVY SELL'; pressureColor = '#dc2626'; }
-  return { top5, top10, top20, netFlow, totalBought, totalSold, buying, selling, holding, fresh, exits, risk, riskColor, pressure, pressureColor };
+  return { top5, top10, top20, netFlow, totalBought, totalSold, buying, selling, holding, fresh, exits, lpCount, risk, riskColor, pressure, pressureColor };
 }
 
 // ── Render ──────────────────────────────────────────────────
@@ -680,7 +730,7 @@ function render(classified, meta, chain, analytics) {
     <div class="metric-card"><div class="mc-label">Whale Pressure</div><div class="mc-value" style="color:${a.pressureColor}">${a.pressure}</div><div class="mc-sub">${a.buying} buying / ${a.selling} selling / ${a.holding} hold</div></div>
     <div class="metric-card"><div class="mc-label">Net Flow (Top 20)</div><div class="mc-value" style="color:${a.netFlow >= 0 ? 'var(--green)' : 'var(--red)'}">${a.netFlow >= 0 ? '+' : ''}${fmtBal(a.netFlow)}</div><div class="mc-sub">In: ${fmtBal(a.totalBought)} / Out: ${fmtBal(a.totalSold)}</div></div>
     <div class="metric-card"><div class="mc-label">Concentration Risk</div><div class="mc-value"><span class="risk-badge" style="background:${a.riskColor}">${a.risk}</span></div><div class="mc-sub">Top 5: ${a.top5.toFixed(1)}% / Top 10: ${a.top10.toFixed(1)}%</div></div>
-    <div class="metric-card"><div class="mc-label">Top 20 Ownership</div><div class="mc-value">${a.top20.toFixed(1)}%</div><div class="mc-sub">${a.fresh ? a.fresh+' fresh wallet(s) ' : ''}${a.exits ? a.exits+' exit(s)' : ''}</div></div>`;
+    <div class="metric-card"><div class="mc-label">Top 20 Ownership</div><div class="mc-value">${a.top20.toFixed(1)}%</div><div class="mc-sub">${a.lpCount ? a.lpCount+' LP(s) excluded ' : ''}${a.fresh ? a.fresh+' fresh ' : ''}${a.exits ? a.exits+' exit(s)' : ''}</div></div>`;
 
   const explorerFn = EXPLORER[chain] || EXPLORER.solana;
   document.getElementById('tableBody').innerHTML = classified.map(h => {
@@ -689,7 +739,9 @@ function render(classified, meta, chain, analytics) {
     if (h.change != null) { const p = h.change > 0 ? '+' : ''; changeStr = `${p}${fmtBal(Math.abs(h.change))}`; }
     if (h.changePct != null) { const p = h.changePct > 0 ? '+' : ''; pctStr = `${p}${h.changePct.toFixed(1)}%`; }
     const pctBar = h.pctSupply != null ? `<span class="pct-bar" style="width:${Math.min(h.pctSupply, 100)*0.8}px"></span>${h.pctSupply.toFixed(2)}%` : '\u2014';
-    const tag = h.isContract ? '<span class="wallet-tag contract">CONTRACT</span>' : '';
+    const tag = h.walletType === 'lp' ? '<span class="wallet-tag lp">LP</span>'
+      : h.walletType === 'program' ? '<span class="wallet-tag contract">PROGRAM</span>'
+      : h.isContract ? '<span class="wallet-tag contract">CONTRACT</span>' : '';
     return `<tr>
       <td>${h.rank}</td>
       <td class="mono"><a class="addr-link" href="${explorerFn(h.ownerAddress)}" target="_blank" rel="noopener">${shorten(h.ownerAddress,6)}</a>${tag}</td>
@@ -788,16 +840,19 @@ Current analysis context:
     sys += '\n\nTop holders:';
     for (const h of lastClassified) {
       const sig = SIG[h.signal]?.label || h.signal;
-      sys += `\n#${h.rank} ${h.ownerAddress} | Balance: ${h.currentBalance} | % Supply: ${h.pctSupply != null ? h.pctSupply.toFixed(2)+'%' : '?'} | Change: ${h.change != null ? h.change.toFixed(2) : '?'} | Signal: ${sig}${h.isContract ? ' [CONTRACT]' : ''}`;
+      const wtype = h.walletType === 'lp' ? ' [LP]' : h.walletType === 'program' ? ' [PROGRAM]' : h.isContract ? ' [CONTRACT]' : '';
+      sys += `\n#${h.rank} ${h.ownerAddress} | Balance: ${h.currentBalance} | % Supply: ${h.pctSupply != null ? h.pctSupply.toFixed(2)+'%' : '?'} | Change: ${h.change != null ? h.change.toFixed(2) : '?'} | Signal: ${sig}${wtype}`;
     }
   }
 
   sys += `\n\nGuidelines:
 - Be concise and direct. Traders want actionable insight, not fluff.
-- If a holder is tagged CONTRACT, explain what that likely means (LP pool, DEX, bridge, multisig, etc).
+- Holders tagged [LP] are detected liquidity pools (Raydium, Orca, Meteora, Uniswap, Aerodrome, etc). Their balance changes are LP ADD/REMOVE, NOT buy/sell signals. Explain this clearly.
+- LP holders are excluded from whale pressure calculations.
+- Holders tagged [CONTRACT] are smart contracts that weren't identified as LPs — could be bridges, multisigs, lending protocols, etc.
 - Reference specific holder data when answering.
-- If asked about a specific address, note its rank, balance, % supply, signal, and any patterns.
-- Suggest what the user could look up on Solscan/Basescan for more info.
+- If asked about a specific address, note its rank, balance, % supply, signal, wallet type, and any patterns.
+- Suggest what the user could look up on Solscan/Basescan for more info (e.g. "check the Programs tab to see what protocol this belongs to").
 - If you don't have enough info, say so and suggest what on-chain data could help.`;
 
   return sys;
@@ -865,7 +920,8 @@ function askAboutHolder(index) {
   if (!panel.classList.contains('open')) toggleChat();
 
   const input = document.getElementById('chatInput');
-  input.value = `Tell me about holder #${h.rank} (${h.ownerAddress}). It's showing ${sig} with ${fmtBal(h.currentBalance)} tokens (${h.pctSupply?.toFixed(2) || '?'}% of supply)${h.isContract ? ' and is tagged as a CONTRACT' : ''}. What can you tell me about this wallet?`;
+  const wtype = h.walletType === 'lp' ? ' and is detected as an LP pool' : h.walletType === 'program' ? ' and is a program/protocol' : h.isContract ? ' and is tagged as a CONTRACT' : '';
+  input.value = `Tell me about holder #${h.rank} (${h.ownerAddress}). It's showing ${sig} with ${fmtBal(h.currentBalance)} tokens (${h.pctSupply?.toFixed(2) || '?'}% of supply)${wtype}. What can you tell me about this wallet?`;
   input.focus();
 }
 
