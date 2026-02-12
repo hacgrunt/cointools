@@ -40,7 +40,7 @@
     max-width: 720px; margin: 0 auto; padding: 0 1.5rem;
     overflow: hidden; max-height: 0; transition: max-height 0.3s ease;
   }
-  .settings-panel.open { max-height: 350px; }
+  .settings-panel.open { max-height: 500px; }
   .settings-inner { padding: 1rem 0; border-bottom: 1px solid var(--border); }
   .settings-inner p { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
   .settings-inner a { color: var(--cyan); text-decoration: none; }
@@ -101,32 +101,25 @@
   }
   .status.error { color: var(--red); }
 
-  /* Results */
   .results { max-width: 1100px; margin: 1.5rem auto 0; padding: 0 1.5rem; display: none; }
   .results.visible { display: block; }
 
-  /* Token header */
-  .token-header {
-    display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;
-  }
+  .token-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
   .token-name { font-size: 1.3rem; font-weight: 700; }
   .token-symbol { font-size: 1rem; color: var(--muted); font-weight: 500; }
   .token-supply { font-size: 0.8rem; color: var(--muted); font-family: monospace; }
 
-  /* Metric cards grid */
   .metrics-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 0.75rem; margin-bottom: 1.25rem;
   }
   .metric-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 0.75rem 1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem;
   }
   .metric-card .mc-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
   .metric-card .mc-value { font-size: 1.15rem; font-weight: 700; font-family: monospace; }
   .metric-card .mc-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
 
-  /* Risk badge */
   .risk-badge {
     display: inline-block; padding: 0.15rem 0.6rem; border-radius: 4px;
     font-size: 0.72rem; font-weight: 700; color: #fff;
@@ -135,14 +128,10 @@
   .charts-grid {
     display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;
   }
-  .chart-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 1rem;
-  }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
   .chart-card h3 { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
   canvas { max-height: 240px; }
 
-  /* Table */
   .holders-table {
     width: 100%; border-collapse: collapse; background: var(--surface);
     border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 2rem;
@@ -153,9 +142,7 @@
     color: var(--muted); font-size: 0.68rem; text-transform: uppercase;
     letter-spacing: 0.05em; font-weight: 600; white-space: nowrap;
   }
-  .holders-table td {
-    padding: 0.5rem 0.6rem; border-top: 1px solid var(--border); font-size: 0.82rem;
-  }
+  .holders-table td { padding: 0.5rem 0.6rem; border-top: 1px solid var(--border); font-size: 0.82rem; }
   .holders-table tr:hover td { background: color-mix(in srgb, var(--surface) 50%, var(--border)); }
   .mono { font-family: monospace; font-size: 0.78rem; }
   .addr-link { color: var(--cyan); cursor: pointer; transition: opacity 0.15s; }
@@ -175,6 +162,80 @@
     display: inline-block; height: 4px; border-radius: 2px; background: var(--cyan);
     vertical-align: middle; margin-right: 0.4rem; opacity: 0.6; min-width: 2px;
   }
+  .ask-btn {
+    background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--purple);
+    font-size: 0.65rem; padding: 0.1rem 0.35rem; cursor: pointer; transition: all 0.15s;
+    font-weight: 600; white-space: nowrap;
+  }
+  .ask-btn:hover { background: var(--purple); color: #fff; border-color: var(--purple); }
+
+  /* ── Chat panel ──────────────────────────────────────────── */
+  .chat-fab {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; width: 48px; height: 48px;
+    border-radius: 50%; background: var(--purple); border: none; color: #fff;
+    font-size: 1.3rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    transition: transform 0.15s; z-index: 100; display: flex; align-items: center; justify-content: center;
+  }
+  .chat-fab:hover { transform: scale(1.08); }
+  .chat-fab.has-chat { background: var(--green); }
+
+  .chat-panel {
+    position: fixed; bottom: 0; right: 0; width: 420px; height: 100vh;
+    background: var(--bg); border-left: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 200;
+    transform: translateX(100%); transition: transform 0.25s ease;
+  }
+  .chat-panel.open { transform: translateX(0); }
+
+  .chat-header {
+    padding: 0.75rem 1rem; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .chat-header h2 { font-size: 0.95rem; font-weight: 600; flex: 1; }
+  .chat-header button {
+    background: none; border: none; color: var(--muted); font-size: 1.2rem;
+    cursor: pointer; padding: 0.2rem;
+  }
+  .chat-header button:hover { color: var(--text); }
+  .chat-clear { font-size: 0.75rem !important; border: 1px solid var(--border) !important; border-radius: 4px; padding: 0.2rem 0.5rem !important; }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;
+  }
+  .chat-msg {
+    max-width: 90%; padding: 0.6rem 0.85rem; border-radius: 10px;
+    font-size: 0.84rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;
+  }
+  .chat-msg.user {
+    align-self: flex-end; background: var(--purple); color: #fff;
+    border-bottom-right-radius: 3px;
+  }
+  .chat-msg.ai {
+    align-self: flex-start; background: var(--surface); border: 1px solid var(--border);
+    border-bottom-left-radius: 3px;
+  }
+  .chat-msg.ai .thinking { color: var(--muted); font-style: italic; }
+  .chat-msg.system {
+    align-self: center; color: var(--muted); font-size: 0.75rem;
+    background: none; padding: 0.25rem;
+  }
+
+  .chat-input-row {
+    padding: 0.75rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem;
+  }
+  .chat-input-row textarea {
+    flex: 1; padding: 0.55rem 0.75rem; border-radius: 8px; resize: none;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    font-size: 0.85rem; font-family: inherit; outline: none; min-height: 38px; max-height: 120px;
+  }
+  .chat-input-row textarea:focus { border-color: var(--muted); }
+  .chat-input-row textarea::placeholder { color: var(--muted); }
+  .chat-input-row button {
+    padding: 0.55rem 1rem; border-radius: 8px; border: none;
+    background: var(--purple); color: #fff; font-weight: 600; font-size: 0.85rem;
+    cursor: pointer; white-space: nowrap; align-self: flex-end;
+  }
+  .chat-input-row button:disabled { opacity: 0.4; cursor: not-allowed; }
 
   @media (max-width: 800px) {
     .charts-grid { grid-template-columns: 1fr; }
@@ -182,10 +243,9 @@
     .header { padding: 1rem; }
     .search-wrap, .results, .status, .settings-panel { padding: 0 1rem; }
     .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .chat-panel { width: 100vw; }
   }
-  @media (max-width: 500px) {
-    .metrics-grid { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 500px) { .metrics-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -199,9 +259,7 @@
 
 <div class="settings-panel" id="settingsPanel">
   <div class="settings-inner">
-    <p style="margin-bottom:0.75rem">
-      Free API keys are needed for on-chain data. Both take 30 seconds to sign up.
-    </p>
+    <p style="margin-bottom:0.75rem">Free API keys needed for on-chain data. Each takes 30 seconds.</p>
     <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.25rem">
       Solana RPC URL — <a href="https://dev.helius.xyz/dashboard/app" target="_blank" rel="noopener">Get free Helius key</a>, then paste: <code style="font-size:0.72rem;color:var(--cyan)">https://mainnet.helius-rpc.com/?api-key=YOUR_KEY</code>
     </label>
@@ -213,11 +271,19 @@
     <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.25rem">
       Moralis API Key (for Base/ETH) — <a href="https://admin.moralis.io/register" target="_blank" rel="noopener">Get free key</a>
     </label>
-    <div class="key-row">
+    <div class="key-row" style="margin-bottom:0.75rem">
       <input id="moralisKeyInput" type="text" placeholder="Paste Moralis API key..." />
       <button onclick="saveKey('cointools_moralis_key','moralisKeyInput','keySaved')">Save</button>
     </div>
     <div class="key-saved" id="keySaved">Saved.</div>
+    <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:0.25rem">
+      Anthropic API Key (for AI chat) — <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get key</a>
+    </label>
+    <div class="key-row">
+      <input id="anthropicKeyInput" type="password" placeholder="sk-ant-..." />
+      <button onclick="saveKey('cointools_anthropic_key','anthropicKeyInput','aiSaved')">Save</button>
+    </div>
+    <div class="key-saved" id="aiSaved">Saved.</div>
   </div>
 </div>
 
@@ -253,10 +319,29 @@
   <table class="holders-table">
     <thead><tr>
       <th>#</th><th>Holder</th><th class="r">Balance</th><th class="r">% Supply</th>
-      <th class="r">Change</th><th class="r">% Chg</th><th>Signal</th>
+      <th class="r">Change</th><th class="r">% Chg</th><th>Signal</th><th></th>
     </tr></thead>
     <tbody id="tableBody"></tbody>
   </table>
+</div>
+
+<!-- Chat FAB -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Ask AI about holders">?</button>
+
+<!-- Chat panel -->
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-header">
+    <h2>Ask AI</h2>
+    <button class="chat-clear" onclick="clearChat()">Clear</button>
+    <button onclick="toggleChat()">&#x2715;</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="chat-msg system">Ask about any holder, wallet, pool, or the overall analysis. Click "Ask" on a holder row for context.</div>
+  </div>
+  <div class="chat-input-row">
+    <textarea id="chatInput" placeholder="Ask about a holder or the analysis..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+    <button id="chatSendBtn" onclick="sendChat()">Send</button>
+  </div>
 </div>
 
 <script>
@@ -266,6 +351,7 @@ const MORALIS_BASE = 'https://deep-index.moralis.io/api/v2.2';
 const EVM_RPCS = { base: 'https://rpc.ankr.com/base', eth: 'https://rpc.ankr.com/eth' };
 const MORALIS_CHAINS = { base: '0x2105', eth: '0x1' };
 const PERIODS = { '1h': 3600, '6h': 21600, '12h': 43200, '24h': 86400, '3d': 259200, '7d': 604800 };
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
 const SIG = {
   STRONG_BUY:  { label: 'STRONG BUY',  color: '#16a34a' },
@@ -285,10 +371,13 @@ const EXPLORER = {
 
 let changeChart = null, sentimentChart = null, concChart = null;
 let selectedPeriod = '24h', currentChain = 'solana';
+let lastClassified = null, lastMeta = null, lastAnalytics = null, lastContract = '';
+let chatHistory = [];
 
 // ── Settings ────────────────────────────────────────────────
 function getMoralisKey() { return localStorage.getItem('cointools_moralis_key') || ''; }
 function getSolanaRpc() { return localStorage.getItem('cointools_solana_rpc') || ''; }
+function getAnthropicKey() { return localStorage.getItem('cointools_anthropic_key') || ''; }
 function saveKey(storageKey, inputId, savedId) {
   const val = document.getElementById(inputId).value.trim();
   if (!val) return;
@@ -301,13 +390,14 @@ function saveKey(storageKey, inputId, savedId) {
 function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('open'); }
 function updateGearBadge() {
   const btn = document.getElementById('gearBtn');
-  if (getMoralisKey() || getSolanaRpc()) btn.classList.add('has-key');
+  if (getMoralisKey() || getSolanaRpc() || getAnthropicKey()) btn.classList.add('has-key');
   else btn.classList.remove('has-key');
 }
 document.addEventListener('DOMContentLoaded', () => {
-  const m = getMoralisKey(), s = getSolanaRpc();
+  const m = getMoralisKey(), s = getSolanaRpc(), a = getAnthropicKey();
   if (m) document.getElementById('moralisKeyInput').value = m;
   if (s) document.getElementById('solanaRpcInput').value = s;
+  if (a) document.getElementById('anthropicKeyInput').value = a;
   updateGearBadge();
 });
 
@@ -337,7 +427,6 @@ function fmtBal(v) {
   if (v >= 1e3) return v.toLocaleString(undefined,{maximumFractionDigits:0});
   return v.toLocaleString(undefined,{maximumFractionDigits:2});
 }
-function fmtPct(v) { return v == null ? '\u2014' : v.toFixed(2) + '%'; }
 function setStatus(msg, err=false) {
   const el = document.getElementById('status');
   el.textContent = msg; el.className = 'status' + (err ? ' error' : '');
@@ -371,11 +460,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function solanaTokenMeta(mint) {
   try {
     const supply = await solanaRpc('getTokenSupply', [mint]);
-    return {
-      name: null, symbol: null,
-      totalSupply: parseFloat(supply?.value?.uiAmountString || '0'),
-      decimals: supply?.value?.decimals || 0,
-    };
+    return { name: null, symbol: null, totalSupply: parseFloat(supply?.value?.uiAmountString || '0'), decimals: supply?.value?.decimals || 0 };
   } catch (_) { return { name: null, symbol: null, totalSupply: 0, decimals: 0 }; }
 }
 
@@ -383,17 +468,14 @@ async function solanaTokenMeta(mint) {
 async function analyzeSolana(mint, periodSecs) {
   setStatus('Fetching token info...');
   const meta = await solanaTokenMeta(mint);
-
   setStatus('Fetching top 20 holders...');
   const res = await solanaRpc('getTokenLargestAccounts', [mint]);
   const accounts = res.value;
   if (!accounts || accounts.length === 0) throw new Error('No holders found for this token.');
-
   const holders = accounts.map((a, i) => ({
     tokenAccount: a.address, currentBalance: parseFloat(a.uiAmountString),
     decimals: a.decimals, rank: i + 1, owner: null, historicalBalance: null, isContract: false,
   }));
-
   setStatus(`Resolving ${holders.length} wallets...`);
   for (let i = 0; i < holders.length; i++) {
     try {
@@ -403,21 +485,17 @@ async function analyzeSolana(mint, periodSecs) {
     } catch (_) {}
     if (i % 5 === 4) await sleep(150);
   }
-
   const targetTime = Math.floor(Date.now() / 1000) - periodSecs;
   for (let i = 0; i < holders.length; i++) {
     setStatus(`History ${i + 1}/${holders.length}...`);
     try { holders[i].historicalBalance = await solanaHistoricalBalance(holders[i].tokenAccount, targetTime); }
     catch (_) {}
   }
-
   return {
     meta,
     holders: holders.map(h => ({
-      rank: h.rank, holderAddress: h.tokenAccount,
-      ownerAddress: h.owner || h.tokenAccount,
-      currentBalance: h.currentBalance, historicalBalance: h.historicalBalance,
-      isContract: h.isContract,
+      rank: h.rank, holderAddress: h.tokenAccount, ownerAddress: h.owner || h.tokenAccount,
+      currentBalance: h.currentBalance, historicalBalance: h.historicalBalance, isContract: h.isContract,
     })),
   };
 }
@@ -484,7 +562,6 @@ async function evmTokenMeta(contract, chain) {
   } catch (_) { return { name: null, symbol: null, totalSupply: 0, decimals: 18 }; }
 }
 
-// ── EVM: check if address is contract ───────────────────────
 async function isEvmContract(addr, evmRpc) {
   try {
     const code = await rpc(evmRpc, 'eth_getCode', [addr, 'latest']);
@@ -492,7 +569,7 @@ async function isEvmContract(addr, evmRpc) {
   } catch (_) { return false; }
 }
 
-// ── EVM analysis (Moralis + standard RPC) ───────────────────
+// ── EVM analysis ────────────────────────────────────────────
 async function analyzeEVM(contract, chain, periodSecs) {
   const moralisKey = getMoralisKey();
   if (!moralisKey) {
@@ -501,10 +578,8 @@ async function analyzeEVM(contract, chain, periodSecs) {
   }
   const evmRpc = EVM_RPCS[chain] || EVM_RPCS.base;
   const moralisChain = MORALIS_CHAINS[chain] || MORALIS_CHAINS.base;
-
   setStatus('Fetching token info...');
   const meta = await evmTokenMeta(contract, chain);
-
   setStatus('Fetching top holders...');
   const url = `${MORALIS_BASE}/erc20/${contract}/owners?chain=${moralisChain}&limit=20&order=DESC`;
   const resp = await fetch(url, { headers: { 'X-API-Key': moralisKey, 'Accept': 'application/json' } });
@@ -513,31 +588,23 @@ async function analyzeEVM(contract, chain, periodSecs) {
   const data = await resp.json();
   const rawHolders = data?.result || [];
   if (rawHolders.length === 0) throw new Error('No holders found. Check the contract address and chain.');
-
   const decimals = meta.decimals;
   const holders = rawHolders.slice(0, 20).map((h, i) => {
     let bal = 0;
     try { bal = Number(BigInt(h.balance || '0')) / (10 ** decimals); }
     catch (_) { try { bal = parseFloat(h.balance_formatted || '0'); } catch (_) {} }
-    return {
-      rank: i + 1, holderAddress: h.owner_address, ownerAddress: h.owner_address,
-      currentBalance: bal, historicalBalance: null, isContract: false,
-    };
+    return { rank: i + 1, holderAddress: h.owner_address, ownerAddress: h.owner_address, currentBalance: bal, historicalBalance: null, isContract: false };
   });
-
-  // Check contract vs EOA for top 5 (to avoid rate limits)
   setStatus('Checking wallet types...');
   for (let i = 0; i < Math.min(holders.length, 5); i++) {
     holders[i].isContract = await isEvmContract(holders[i].holderAddress, evmRpc);
     if (i % 2 === 1) await sleep(100);
   }
-
   setStatus('Getting current block...');
   const blockHex = await rpc(evmRpc, 'eth_blockNumber', []);
   const currentBlock = parseInt(blockHex, 16);
   const bt = chain === 'arbitrum' ? 0.25 : (chain === 'eth' ? 12.0 : 2.0);
   const historicalBlock = Math.max(1, currentBlock - Math.floor(periodSecs / bt));
-
   for (let i = 0; i < holders.length; i++) {
     setStatus(`Historical balance ${i + 1}/${holders.length}...`);
     try {
@@ -547,7 +614,6 @@ async function analyzeEVM(contract, chain, periodSecs) {
     } catch (_) {}
     if (i % 4 === 3) await sleep(100);
   }
-
   return { meta, holders };
 }
 
@@ -557,16 +623,10 @@ function classify(holders, totalSupply) {
     const cur = h.currentBalance, hist = h.historicalBalance;
     const pctSupply = totalSupply > 0 ? (cur / totalSupply) * 100 : null;
     let signal, change = null, changePct = null;
-
-    if (hist == null) {
-      signal = 'NEW';
-    } else if (hist === 0 && cur > 0) {
-      signal = 'FRESH';
-      change = cur; changePct = null;
-    } else if (cur === 0 && hist > 0) {
-      signal = 'EXIT';
-      change = -hist; changePct = -100;
-    } else {
+    if (hist == null) { signal = 'NEW'; }
+    else if (hist === 0 && cur > 0) { signal = 'FRESH'; change = cur; }
+    else if (cur === 0 && hist > 0) { signal = 'EXIT'; change = -hist; changePct = -100; }
+    else {
       change = cur - hist;
       const eps = Math.max(cur, hist, 1) * 1e-9;
       if (Math.abs(change) < eps) { signal = 'HOLD'; change = 0; }
@@ -580,35 +640,24 @@ function classify(holders, totalSupply) {
   });
 }
 
-// ── Compute analytics ───────────────────────────────────────
-function computeAnalytics(classified, totalSupply) {
+function computeAnalytics(classified) {
   const top5 = classified.slice(0, 5).reduce((s, h) => s + (h.pctSupply || 0), 0);
   const top10 = classified.slice(0, 10).reduce((s, h) => s + (h.pctSupply || 0), 0);
   const top20 = classified.reduce((s, h) => s + (h.pctSupply || 0), 0);
-
-  let netFlow = 0, totalBought = 0, totalSold = 0;
-  let buying = 0, selling = 0, holding = 0, fresh = 0, exits = 0;
+  let netFlow = 0, totalBought = 0, totalSold = 0, buying = 0, selling = 0, holding = 0, fresh = 0, exits = 0;
   for (const h of classified) {
-    if (h.change != null) {
-      netFlow += h.change;
-      if (h.change > 0) totalBought += h.change;
-      else totalSold += Math.abs(h.change);
-    }
+    if (h.change != null) { netFlow += h.change; if (h.change > 0) totalBought += h.change; else totalSold += Math.abs(h.change); }
     if (h.signal === 'STRONG_BUY' || h.signal === 'BUY') buying++;
     else if (h.signal === 'STRONG_SELL' || h.signal === 'SELL') selling++;
     else if (h.signal === 'HOLD') holding++;
     else if (h.signal === 'FRESH') { fresh++; buying++; }
     else if (h.signal === 'EXIT') { exits++; selling++; }
   }
-
-  // Concentration risk: low/medium/high/extreme
   let risk, riskColor;
   if (top5 >= 80) { risk = 'EXTREME'; riskColor = '#7f1d1d'; }
   else if (top5 >= 50) { risk = 'HIGH'; riskColor = '#dc2626'; }
   else if (top5 >= 25) { risk = 'MEDIUM'; riskColor = '#eab308'; }
   else { risk = 'LOW'; riskColor = '#22c55e'; }
-
-  // Whale pressure: ratio of buyers to sellers weighted by volume
   let pressure, pressureColor;
   const ratio = totalSold > 0 ? totalBought / totalSold : (totalBought > 0 ? 99 : 1);
   if (ratio >= 3) { pressure = 'HEAVY BUY'; pressureColor = '#16a34a'; }
@@ -616,71 +665,38 @@ function computeAnalytics(classified, totalSupply) {
   else if (ratio >= 0.67) { pressure = 'NEUTRAL'; pressureColor = '#eab308'; }
   else if (ratio >= 0.33) { pressure = 'SELL LEAN'; pressureColor = '#ef4444'; }
   else { pressure = 'HEAVY SELL'; pressureColor = '#dc2626'; }
-
   return { top5, top10, top20, netFlow, totalBought, totalSold, buying, selling, holding, fresh, exits, risk, riskColor, pressure, pressureColor };
 }
 
 // ── Render ──────────────────────────────────────────────────
 function render(classified, meta, chain, analytics) {
-  // Token header
   const hdr = document.getElementById('tokenHeader');
-  const nameStr = meta.name || 'Unknown Token';
-  const symStr = meta.symbol ? `$${meta.symbol}` : '';
-  const supplyStr = meta.totalSupply > 0 ? `Supply: ${fmtBal(meta.totalSupply)}` : '';
-  hdr.innerHTML = `<span class="token-name">${nameStr}</span>
-    <span class="token-symbol">${symStr}</span>
-    <span class="token-supply">${supplyStr}</span>`;
+  hdr.innerHTML = `<span class="token-name">${meta.name || 'Unknown Token'}</span>
+    <span class="token-symbol">${meta.symbol ? '$'+meta.symbol : ''}</span>
+    <span class="token-supply">${meta.totalSupply > 0 ? 'Supply: '+fmtBal(meta.totalSupply) : ''}</span>`;
 
-  // Metrics cards
   const a = analytics;
   document.getElementById('metricsGrid').innerHTML = `
-    <div class="metric-card">
-      <div class="mc-label">Whale Pressure</div>
-      <div class="mc-value" style="color:${a.pressureColor}">${a.pressure}</div>
-      <div class="mc-sub">${a.buying} buying / ${a.selling} selling / ${a.holding} hold</div>
-    </div>
-    <div class="metric-card">
-      <div class="mc-label">Net Flow (Top 20)</div>
-      <div class="mc-value" style="color:${a.netFlow >= 0 ? 'var(--green)' : 'var(--red)'}">
-        ${a.netFlow >= 0 ? '+' : ''}${fmtBal(a.netFlow)}
-      </div>
-      <div class="mc-sub">In: ${fmtBal(a.totalBought)} / Out: ${fmtBal(a.totalSold)}</div>
-    </div>
-    <div class="metric-card">
-      <div class="mc-label">Concentration Risk</div>
-      <div class="mc-value"><span class="risk-badge" style="background:${a.riskColor}">${a.risk}</span></div>
-      <div class="mc-sub">Top 5: ${a.top5.toFixed(1)}% / Top 10: ${a.top10.toFixed(1)}%</div>
-    </div>
-    <div class="metric-card">
-      <div class="mc-label">Top 20 Ownership</div>
-      <div class="mc-value">${a.top20.toFixed(1)}%</div>
-      <div class="mc-sub">${a.fresh ? a.fresh + ' fresh wallet(s) ' : ''}${a.exits ? a.exits + ' exit(s)' : ''}</div>
-    </div>`;
+    <div class="metric-card"><div class="mc-label">Whale Pressure</div><div class="mc-value" style="color:${a.pressureColor}">${a.pressure}</div><div class="mc-sub">${a.buying} buying / ${a.selling} selling / ${a.holding} hold</div></div>
+    <div class="metric-card"><div class="mc-label">Net Flow (Top 20)</div><div class="mc-value" style="color:${a.netFlow >= 0 ? 'var(--green)' : 'var(--red)'}">${a.netFlow >= 0 ? '+' : ''}${fmtBal(a.netFlow)}</div><div class="mc-sub">In: ${fmtBal(a.totalBought)} / Out: ${fmtBal(a.totalSold)}</div></div>
+    <div class="metric-card"><div class="mc-label">Concentration Risk</div><div class="mc-value"><span class="risk-badge" style="background:${a.riskColor}">${a.risk}</span></div><div class="mc-sub">Top 5: ${a.top5.toFixed(1)}% / Top 10: ${a.top10.toFixed(1)}%</div></div>
+    <div class="metric-card"><div class="mc-label">Top 20 Ownership</div><div class="mc-value">${a.top20.toFixed(1)}%</div><div class="mc-sub">${a.fresh ? a.fresh+' fresh wallet(s) ' : ''}${a.exits ? a.exits+' exit(s)' : ''}</div></div>`;
 
-  // Table
   const explorerFn = EXPLORER[chain] || EXPLORER.solana;
   document.getElementById('tableBody').innerHTML = classified.map(h => {
     const sig = SIG[h.signal] || SIG.NEW;
     let changeStr = '\u2014', pctStr = '\u2014';
-    if (h.change != null) {
-      const p = h.change > 0 ? '+' : '';
-      changeStr = `${p}${fmtBal(Math.abs(h.change))}`;
-    }
-    if (h.changePct != null) {
-      const p = h.changePct > 0 ? '+' : '';
-      pctStr = `${p}${h.changePct.toFixed(1)}%`;
-    }
-    const pctBar = h.pctSupply != null ? `<span class="pct-bar" style="width:${Math.min(h.pctSupply, 100) * 0.8}px"></span>${h.pctSupply.toFixed(2)}%` : '\u2014';
+    if (h.change != null) { const p = h.change > 0 ? '+' : ''; changeStr = `${p}${fmtBal(Math.abs(h.change))}`; }
+    if (h.changePct != null) { const p = h.changePct > 0 ? '+' : ''; pctStr = `${p}${h.changePct.toFixed(1)}%`; }
+    const pctBar = h.pctSupply != null ? `<span class="pct-bar" style="width:${Math.min(h.pctSupply, 100)*0.8}px"></span>${h.pctSupply.toFixed(2)}%` : '\u2014';
     const tag = h.isContract ? '<span class="wallet-tag contract">CONTRACT</span>' : '';
-    const addrDisplay = shorten(h.ownerAddress, 6);
     return `<tr>
       <td>${h.rank}</td>
-      <td class="mono"><a class="addr-link" href="${explorerFn(h.ownerAddress)}" target="_blank" rel="noopener">${addrDisplay}</a>${tag}</td>
-      <td class="r">${fmtBal(h.currentBalance)}</td>
-      <td class="r">${pctBar}</td>
-      <td class="r" style="color:${sig.color}">${changeStr}</td>
-      <td class="r" style="color:${sig.color}">${pctStr}</td>
+      <td class="mono"><a class="addr-link" href="${explorerFn(h.ownerAddress)}" target="_blank" rel="noopener">${shorten(h.ownerAddress,6)}</a>${tag}</td>
+      <td class="r">${fmtBal(h.currentBalance)}</td><td class="r">${pctBar}</td>
+      <td class="r" style="color:${sig.color}">${changeStr}</td><td class="r" style="color:${sig.color}">${pctStr}</td>
       <td><span class="signal" style="background:${sig.color}">${sig.label}</span></td>
+      <td><button class="ask-btn" onclick="askAboutHolder(${h.rank - 1})">Ask</button></td>
     </tr>`;
   }).join('');
 
@@ -691,80 +707,188 @@ function render(classified, meta, chain, analytics) {
 
   if (changeChart) changeChart.destroy();
   changeChart = new Chart(document.getElementById('changeChart'), {
-    type: 'bar',
-    data: { labels, datasets: [{ data: changes, backgroundColor: colors, borderRadius: 3 }] },
-    options: {
-      responsive: true, plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#52525b', font: { size: 8 } }, grid: { display: false } },
-        y: { ticks: { color: '#52525b' }, grid: { color: '#27272a' } }
-      }
-    }
+    type: 'bar', data: { labels, datasets: [{ data: changes, backgroundColor: colors, borderRadius: 3 }] },
+    options: { responsive: true, plugins: { legend: { display: false } },
+      scales: { x: { ticks: { color: '#52525b', font: { size: 8 } }, grid: { display: false } }, y: { ticks: { color: '#52525b' }, grid: { color: '#27272a' } } } }
   });
 
-  // Sentiment doughnut
-  const sentMap = { buying: a.buying, selling: a.selling, holding: a.holding };
   const sentLbls = [], sentVals = [], sentClrs = [];
-  if (sentMap.buying) { sentLbls.push('Buying'); sentVals.push(sentMap.buying); sentClrs.push('#22c55e'); }
-  if (sentMap.selling) { sentLbls.push('Selling'); sentVals.push(sentMap.selling); sentClrs.push('#ef4444'); }
-  if (sentMap.holding) { sentLbls.push('Holding'); sentVals.push(sentMap.holding); sentClrs.push('#52525b'); }
-
+  if (a.buying) { sentLbls.push('Buying'); sentVals.push(a.buying); sentClrs.push('#22c55e'); }
+  if (a.selling) { sentLbls.push('Selling'); sentVals.push(a.selling); sentClrs.push('#ef4444'); }
+  if (a.holding) { sentLbls.push('Holding'); sentVals.push(a.holding); sentClrs.push('#52525b'); }
   if (sentimentChart) sentimentChart.destroy();
   sentimentChart = new Chart(document.getElementById('sentimentChart'), {
-    type: 'doughnut',
-    data: { labels: sentLbls, datasets: [{ data: sentVals, backgroundColor: sentClrs, borderWidth: 0 }] },
-    options: { responsive: true, cutout: '60%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 } } } } }
+    type: 'doughnut', data: { labels: sentLbls, datasets: [{ data: sentVals, backgroundColor: sentClrs, borderWidth: 0 }] },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 } } } } }
   });
 
-  // Concentration horizontal bar
-  const concData = [a.top5, a.top10 - a.top5, a.top20 - a.top10, Math.max(0, 100 - a.top20)];
+  const cd = [a.top5, a.top10 - a.top5, a.top20 - a.top10, Math.max(0, 100 - a.top20)];
   if (concChart) concChart.destroy();
   concChart = new Chart(document.getElementById('concChart'), {
-    type: 'bar',
-    data: {
-      labels: ['Supply Distribution'],
-      datasets: [
-        { label: 'Top 5', data: [concData[0]], backgroundColor: '#ef4444', borderRadius: 0 },
-        { label: 'Top 6-10', data: [concData[1]], backgroundColor: '#f97316', borderRadius: 0 },
-        { label: 'Top 11-20', data: [concData[2]], backgroundColor: '#eab308', borderRadius: 0 },
-        { label: 'Others', data: [concData[3]], backgroundColor: '#27272a', borderRadius: 0 },
-      ]
-    },
-    options: {
-      responsive: true, indexAxis: 'y',
-      scales: {
-        x: { stacked: true, max: 100, ticks: { color: '#52525b', callback: v => v + '%' }, grid: { color: '#27272a' } },
-        y: { stacked: true, display: false }
-      },
-      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 }, boxWidth: 12 } } }
-    }
+    type: 'bar', data: { labels: ['Supply Distribution'], datasets: [
+      { label: 'Top 5', data: [cd[0]], backgroundColor: '#ef4444' },
+      { label: 'Top 6-10', data: [cd[1]], backgroundColor: '#f97316' },
+      { label: 'Top 11-20', data: [cd[2]], backgroundColor: '#eab308' },
+      { label: 'Others', data: [cd[3]], backgroundColor: '#27272a' },
+    ]},
+    options: { responsive: true, indexAxis: 'y',
+      scales: { x: { stacked: true, max: 100, ticks: { color: '#52525b', callback: v => v+'%' }, grid: { color: '#27272a' } }, y: { stacked: true, display: false } },
+      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 }, boxWidth: 12 } } } }
   });
 
   document.getElementById('results').classList.add('visible');
+}
+
+// ── Chat ────────────────────────────────────────────────────
+function toggleChat() {
+  const panel = document.getElementById('chatPanel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) document.getElementById('chatInput').focus();
+}
+
+function clearChat() {
+  chatHistory = [];
+  const msgs = document.getElementById('chatMessages');
+  msgs.innerHTML = '<div class="chat-msg system">Chat cleared. Ask about any holder or the analysis.</div>';
+}
+
+function addChatMsg(role, text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function buildSystemPrompt() {
+  let sys = `You are an on-chain trading analyst assistant embedded in a token holder tracking tool called Cointools. You help traders understand holder behavior, wallet activity, and on-chain signals.
+
+Current analysis context:
+- Chain: ${currentChain}
+- Token contract: ${lastContract}
+- Period: ${selectedPeriod}`;
+
+  if (lastMeta) {
+    sys += `\n- Token: ${lastMeta.name || 'Unknown'} (${lastMeta.symbol || '?'})`;
+    sys += `\n- Total supply: ${lastMeta.totalSupply}`;
+  }
+  if (lastAnalytics) {
+    const a = lastAnalytics;
+    sys += `\n\nAnalytics summary:
+- Whale pressure: ${a.pressure}
+- Net flow: ${a.netFlow >= 0 ? '+' : ''}${a.netFlow.toFixed(2)}
+- Tokens flowing in: ${a.totalBought.toFixed(2)}, out: ${a.totalSold.toFixed(2)}
+- Top 5 hold: ${a.top5.toFixed(1)}%, Top 10: ${a.top10.toFixed(1)}%, Top 20: ${a.top20.toFixed(1)}%
+- Concentration risk: ${a.risk}
+- Buying: ${a.buying}, Selling: ${a.selling}, Holding: ${a.holding}, Fresh: ${a.fresh}, Exits: ${a.exits}`;
+  }
+  if (lastClassified && lastClassified.length > 0) {
+    sys += '\n\nTop holders:';
+    for (const h of lastClassified) {
+      const sig = SIG[h.signal]?.label || h.signal;
+      sys += `\n#${h.rank} ${h.ownerAddress} | Balance: ${h.currentBalance} | % Supply: ${h.pctSupply != null ? h.pctSupply.toFixed(2)+'%' : '?'} | Change: ${h.change != null ? h.change.toFixed(2) : '?'} | Signal: ${sig}${h.isContract ? ' [CONTRACT]' : ''}`;
+    }
+  }
+
+  sys += `\n\nGuidelines:
+- Be concise and direct. Traders want actionable insight, not fluff.
+- If a holder is tagged CONTRACT, explain what that likely means (LP pool, DEX, bridge, multisig, etc).
+- Reference specific holder data when answering.
+- If asked about a specific address, note its rank, balance, % supply, signal, and any patterns.
+- Suggest what the user could look up on Solscan/Basescan for more info.
+- If you don't have enough info, say so and suggest what on-chain data could help.`;
+
+  return sys;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const apiKey = getAnthropicKey();
+  if (!apiKey) {
+    document.getElementById('settingsPanel').classList.add('open');
+    addChatMsg('system', 'Add your Anthropic API key in Settings to use AI chat.');
+    return;
+  }
+
+  input.value = '';
+  addChatMsg('user', text);
+  chatHistory.push({ role: 'user', content: text });
+
+  const sendBtn = document.getElementById('chatSendBtn');
+  sendBtn.disabled = true;
+  const aiDiv = addChatMsg('ai', 'Thinking...');
+  aiDiv.querySelector || (aiDiv.innerHTML = '<span class="thinking">Thinking...</span>');
+
+  try {
+    const resp = await fetch(ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1024,
+        system: buildSystemPrompt(),
+        messages: chatHistory,
+      }),
+    });
+
+    if (resp.status === 401) { aiDiv.textContent = 'Invalid API key. Check Settings.'; return; }
+    if (!resp.ok) { const err = await resp.text(); aiDiv.textContent = `API error (${resp.status})`; console.error(err); return; }
+
+    const data = await resp.json();
+    const reply = data.content?.[0]?.text || 'No response.';
+    aiDiv.textContent = reply;
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch (e) {
+    aiDiv.textContent = 'Error: ' + e.message;
+    console.error(e);
+  } finally {
+    sendBtn.disabled = false;
+    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+  }
+}
+
+function askAboutHolder(index) {
+  if (!lastClassified || !lastClassified[index]) return;
+  const h = lastClassified[index];
+  const sig = SIG[h.signal]?.label || h.signal;
+  const panel = document.getElementById('chatPanel');
+  if (!panel.classList.contains('open')) toggleChat();
+
+  const input = document.getElementById('chatInput');
+  input.value = `Tell me about holder #${h.rank} (${h.ownerAddress}). It's showing ${sig} with ${fmtBal(h.currentBalance)} tokens (${h.pctSupply?.toFixed(2) || '?'}% of supply)${h.isContract ? ' and is tagged as a CONTRACT' : ''}. What can you tell me about this wallet?`;
+  input.focus();
 }
 
 // ── Main ────────────────────────────────────────────────────
 async function runAnalysis() {
   const address = document.getElementById('addressInput').value.trim();
   if (!address) { setStatus('Please enter a contract address.', true); return; }
-
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   document.getElementById('results').classList.remove('visible');
-
   try {
     currentChain = detectChain(address);
+    lastContract = address;
     const periodSecs = PERIODS[selectedPeriod];
     let result;
     if (currentChain === 'solana') result = await analyzeSolana(address, periodSecs);
     else result = await analyzeEVM(address, currentChain, periodSecs);
-
     const { meta, holders } = result;
     if (!holders || holders.length === 0) throw new Error('No holders found.');
-    const classified = classify(holders, meta.totalSupply);
-    const analytics = computeAnalytics(classified, meta.totalSupply);
-    render(classified, meta, currentChain, analytics);
+    lastMeta = meta;
+    lastClassified = classify(holders, meta.totalSupply);
+    lastAnalytics = computeAnalytics(lastClassified);
+    render(lastClassified, meta, currentChain, lastAnalytics);
     setStatus(`Done \u2014 ${holders.length} holders analyzed on ${currentChain} (${selectedPeriod}).`);
   } catch (e) {
     setStatus(e.message || 'Something went wrong.', true);
