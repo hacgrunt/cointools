@@ -9,13 +9,14 @@
   :root {
     --bg: #09090b; --surface: #18181b; --border: #27272a; --muted: #71717a;
     --text: #e4e4e7; --green: #22c55e; --red: #ef4444; --blue: #3b82f6;
-    --yellow: #eab308; --cyan: #06b6d4;
+    --yellow: #eab308; --cyan: #06b6d4; --purple: #a855f7; --orange: #f97316;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     background: var(--bg); color: var(--text); min-height: 100vh;
   }
+  a { color: inherit; text-decoration: none; }
 
   .header {
     border-bottom: 1px solid var(--border); padding: 1.2rem 2rem;
@@ -35,15 +36,12 @@
   .gear-btn:hover { color: var(--text); border-color: var(--muted); }
   .gear-btn.has-key { color: var(--green); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
 
-  /* Settings panel */
   .settings-panel {
     max-width: 720px; margin: 0 auto; padding: 0 1.5rem;
     overflow: hidden; max-height: 0; transition: max-height 0.3s ease;
   }
   .settings-panel.open { max-height: 350px; }
-  .settings-inner {
-    padding: 1rem 0; border-bottom: 1px solid var(--border);
-  }
+  .settings-inner { padding: 1rem 0; border-bottom: 1px solid var(--border); }
   .settings-inner p { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; }
   .settings-inner a { color: var(--cyan); text-decoration: none; }
   .settings-inner a:hover { text-decoration: underline; }
@@ -60,7 +58,6 @@
   }
   .key-saved { font-size: 0.78rem; color: var(--green); margin-top: 0.3rem; display: none; }
 
-  /* Search */
   .search-wrap { max-width: 720px; margin: 2.5rem auto 0; padding: 0 1.5rem; }
   .search-box { display: flex; gap: 0.5rem; }
   .search-box input {
@@ -105,59 +102,89 @@
   .status.error { color: var(--red); }
 
   /* Results */
-  .results { max-width: 960px; margin: 1.5rem auto 0; padding: 0 1.5rem; display: none; }
+  .results { max-width: 1100px; margin: 1.5rem auto 0; padding: 0 1.5rem; display: none; }
   .results.visible { display: block; }
 
-  .summary-bar {
-    display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.5rem;
+  /* Token header */
+  .token-header {
+    display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;
   }
-  .summary-stat {
-    padding: 0.5rem 1rem; border-radius: 8px;
-    background: var(--surface); border: 1px solid var(--border); font-size: 0.85rem;
+  .token-name { font-size: 1.3rem; font-weight: 700; }
+  .token-symbol { font-size: 1rem; color: var(--muted); font-weight: 500; }
+  .token-supply { font-size: 0.8rem; color: var(--muted); font-family: monospace; }
+
+  /* Metric cards grid */
+  .metrics-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem; margin-bottom: 1.25rem;
   }
-  .summary-stat .val { font-weight: 700; font-size: 1rem; }
-  .summary-stat .lbl { color: var(--muted); font-size: 0.75rem; }
-  .sentiment-badge {
-    padding: 0.4rem 1rem; border-radius: 8px; font-weight: 700;
-    font-size: 0.9rem; text-transform: uppercase;
+  .metric-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem;
+  }
+  .metric-card .mc-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.25rem; }
+  .metric-card .mc-value { font-size: 1.15rem; font-weight: 700; font-family: monospace; }
+  .metric-card .mc-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* Risk badge */
+  .risk-badge {
+    display: inline-block; padding: 0.15rem 0.6rem; border-radius: 4px;
+    font-size: 0.72rem; font-weight: 700; color: #fff;
   }
 
   .charts-grid {
-    display: grid; grid-template-columns: 5fr 3fr; gap: 1rem; margin-bottom: 1.5rem;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem;
   }
   .chart-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 10px; padding: 1rem;
   }
-  .chart-card h3 { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
-  canvas { max-height: 280px; }
+  .chart-card h3 { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.5rem; font-weight: 500; }
+  canvas { max-height: 240px; }
 
+  /* Table */
   .holders-table {
     width: 100%; border-collapse: collapse; background: var(--surface);
     border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 2rem;
   }
   .holders-table th {
-    text-align: left; padding: 0.6rem 0.75rem;
+    text-align: left; padding: 0.6rem 0.6rem;
     background: color-mix(in srgb, var(--surface) 80%, var(--border));
-    color: var(--muted); font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: 0.05em; font-weight: 600;
+    color: var(--muted); font-size: 0.68rem; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600; white-space: nowrap;
   }
   .holders-table td {
-    padding: 0.55rem 0.75rem; border-top: 1px solid var(--border); font-size: 0.85rem;
+    padding: 0.5rem 0.6rem; border-top: 1px solid var(--border); font-size: 0.82rem;
   }
   .holders-table tr:hover td { background: color-mix(in srgb, var(--surface) 50%, var(--border)); }
-  .mono { font-family: monospace; color: var(--muted); font-size: 0.8rem; }
+  .mono { font-family: monospace; font-size: 0.78rem; }
+  .addr-link { color: var(--cyan); cursor: pointer; transition: opacity 0.15s; }
+  .addr-link:hover { opacity: 0.7; }
   .r { text-align: right; font-family: monospace; }
   .signal {
-    display: inline-block; padding: 0.12rem 0.5rem; border-radius: 4px;
-    font-size: 0.72rem; font-weight: 700; color: #fff;
+    display: inline-block; padding: 0.12rem 0.45rem; border-radius: 4px;
+    font-size: 0.68rem; font-weight: 700; color: #fff; white-space: nowrap;
+  }
+  .wallet-tag {
+    display: inline-block; padding: 0.08rem 0.35rem; border-radius: 3px;
+    font-size: 0.62rem; font-weight: 600; border: 1px solid var(--border);
+    color: var(--muted); margin-left: 0.35rem;
+  }
+  .wallet-tag.contract { color: var(--orange); border-color: color-mix(in srgb, var(--orange) 30%, transparent); }
+  .pct-bar {
+    display: inline-block; height: 4px; border-radius: 2px; background: var(--cyan);
+    vertical-align: middle; margin-right: 0.4rem; opacity: 0.6; min-width: 2px;
   }
 
-  @media (max-width: 700px) {
+  @media (max-width: 800px) {
     .charts-grid { grid-template-columns: 1fr; }
     .search-box { flex-direction: column; }
     .header { padding: 1rem; }
     .search-wrap, .results, .status, .settings-panel { padding: 0 1rem; }
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 500px) {
+    .metrics-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -203,9 +230,11 @@
     <label>Period:</label>
     <div class="pill-group" id="periodGroup">
       <button data-val="1h">1H</button>
+      <button data-val="6h">6H</button>
+      <button data-val="12h">12H</button>
       <button data-val="24h" class="active">24H</button>
+      <button data-val="3d">3D</button>
       <button data-val="7d">7D</button>
-      <button data-val="30d">30D</button>
     </div>
     <span id="chainBadge" class="chain-badge">chain: auto</span>
   </div>
@@ -214,33 +243,48 @@
 <div class="status" id="status"></div>
 
 <div class="results" id="results">
-  <div class="summary-bar" id="summaryBar"></div>
+  <div class="token-header" id="tokenHeader"></div>
+  <div class="metrics-grid" id="metricsGrid"></div>
   <div class="charts-grid">
-    <div class="chart-card"><h3>Balance Changes</h3><canvas id="changeChart"></canvas></div>
-    <div class="chart-card"><h3>Holder Sentiment</h3><canvas id="sentimentChart"></canvas></div>
+    <div class="chart-card"><h3>Balance Changes (Top 20)</h3><canvas id="changeChart"></canvas></div>
+    <div class="chart-card"><h3>Whale Sentiment</h3><canvas id="sentimentChart"></canvas></div>
+    <div class="chart-card"><h3>Concentration</h3><canvas id="concChart"></canvas></div>
   </div>
   <table class="holders-table">
-    <thead><tr><th>#</th><th>Holder</th><th class="r">Balance</th><th class="r">Change</th><th>Signal</th></tr></thead>
+    <thead><tr>
+      <th>#</th><th>Holder</th><th class="r">Balance</th><th class="r">% Supply</th>
+      <th class="r">Change</th><th class="r">% Chg</th><th>Signal</th>
+    </tr></thead>
     <tbody id="tableBody"></tbody>
   </table>
 </div>
 
 <script>
 // ── Config ──────────────────────────────────────────────────
-const SOLANA_RPCS = [
-  'https://rpc.ankr.com/solana',
-  'https://api.mainnet-beta.solana.com',
-];
+const SOLANA_RPCS = ['https://rpc.ankr.com/solana','https://api.mainnet-beta.solana.com'];
 const MORALIS_BASE = 'https://deep-index.moralis.io/api/v2.2';
-const EVM_RPCS = {
-  base: 'https://rpc.ankr.com/base',
-  eth: 'https://rpc.ankr.com/eth',
-};
+const EVM_RPCS = { base: 'https://rpc.ankr.com/base', eth: 'https://rpc.ankr.com/eth' };
 const MORALIS_CHAINS = { base: '0x2105', eth: '0x1' };
-const PERIODS = { '1h': 3600, '24h': 86400, '7d': 604800, '30d': 2592000 };
-const SIGNAL_COLORS = { BUY: '#22c55e', SELL: '#ef4444', HOLD: '#52525b', NEW: '#3b82f6' };
+const PERIODS = { '1h': 3600, '6h': 21600, '12h': 43200, '24h': 86400, '3d': 259200, '7d': 604800 };
 
-let changeChart = null, sentimentChart = null, selectedPeriod = '24h';
+const SIG = {
+  STRONG_BUY:  { label: 'STRONG BUY',  color: '#16a34a' },
+  BUY:         { label: 'BUY',          color: '#22c55e' },
+  HOLD:        { label: 'HOLD',         color: '#52525b' },
+  SELL:        { label: 'SELL',         color: '#ef4444' },
+  STRONG_SELL: { label: 'STRONG SELL',  color: '#dc2626' },
+  EXIT:        { label: 'EXIT',         color: '#7f1d1d' },
+  FRESH:       { label: 'FRESH WALLET', color: '#3b82f6' },
+  NEW:         { label: 'NEW',          color: '#6366f1' },
+};
+const EXPLORER = {
+  solana: addr => `https://solscan.io/account/${addr}`,
+  base: addr => `https://basescan.org/address/${addr}`,
+  eth: addr => `https://etherscan.io/address/${addr}`,
+};
+
+let changeChart = null, sentimentChart = null, concChart = null;
+let selectedPeriod = '24h', currentChain = 'solana';
 
 // ── Settings ────────────────────────────────────────────────
 function getMoralisKey() { return localStorage.getItem('cointools_moralis_key') || ''; }
@@ -254,25 +298,20 @@ function saveKey(storageKey, inputId, savedId) {
   updateGearBadge();
   setTimeout(() => { el.style.display = 'none'; }, 2000);
 }
-function toggleSettings() {
-  document.getElementById('settingsPanel').classList.toggle('open');
-}
+function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('open'); }
 function updateGearBadge() {
   const btn = document.getElementById('gearBtn');
   if (getMoralisKey() || getSolanaRpc()) btn.classList.add('has-key');
   else btn.classList.remove('has-key');
 }
-
-// Init: load saved values into inputs, update badge
 document.addEventListener('DOMContentLoaded', () => {
-  const moralis = getMoralisKey();
-  const solRpc = getSolanaRpc();
-  if (moralis) document.getElementById('moralisKeyInput').value = moralis;
-  if (solRpc) document.getElementById('solanaRpcInput').value = solRpc;
+  const m = getMoralisKey(), s = getSolanaRpc();
+  if (m) document.getElementById('moralisKeyInput').value = m;
+  if (s) document.getElementById('solanaRpcInput').value = s;
   updateGearBadge();
 });
 
-// ── Period pills ────────────────────────────────────────────
+// ── UI wiring ───────────────────────────────────────────────
 document.querySelectorAll('#periodGroup button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelector('#periodGroup .active')?.classList.remove('active');
@@ -280,50 +319,34 @@ document.querySelectorAll('#periodGroup button').forEach(btn => {
     selectedPeriod = btn.dataset.val;
   });
 });
-
-document.getElementById('addressInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') runAnalysis();
-});
-
+document.getElementById('addressInput').addEventListener('keydown', e => { if (e.key === 'Enter') runAnalysis(); });
 document.getElementById('addressInput').addEventListener('input', () => {
   const addr = document.getElementById('addressInput').value.trim();
   const badge = document.getElementById('chainBadge');
-  if (addr.startsWith('0x') && addr.length === 42) {
-    badge.textContent = 'chain: base (EVM)';
-    badge.classList.add('detected');
-  } else if (addr.length >= 32 && addr.length <= 44 && !addr.startsWith('0x')) {
-    badge.textContent = 'chain: solana';
-    badge.classList.add('detected');
-  } else {
-    badge.textContent = 'chain: auto';
-    badge.classList.remove('detected');
-  }
+  if (addr.startsWith('0x') && addr.length === 42) { badge.textContent = 'chain: base (EVM)'; badge.classList.add('detected'); }
+  else if (addr.length >= 32 && addr.length <= 44 && !addr.startsWith('0x')) { badge.textContent = 'chain: solana'; badge.classList.add('detected'); }
+  else { badge.textContent = 'chain: auto'; badge.classList.remove('detected'); }
 });
 
 // ── Helpers ─────────────────────────────────────────────────
-function shorten(addr, n = 4) {
-  if (!addr) return '\u2014';
-  return addr.length <= n * 2 + 2 ? addr : addr.slice(0, n) + '..' + addr.slice(-n);
-}
+function shorten(a, n=4) { return (!a) ? '\u2014' : a.length <= n*2+2 ? a : a.slice(0,n)+'..'+a.slice(-n); }
 function fmtBal(v) {
   if (v == null) return '\u2014';
-  if (v >= 1e9) return (v / 1e9).toLocaleString(undefined, { maximumFractionDigits: 2 }) + 'B';
-  if (v >= 1e6) return (v / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 }) + 'M';
-  if (v >= 1e3) return v.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (v >= 1e9) return (v/1e9).toLocaleString(undefined,{maximumFractionDigits:2})+'B';
+  if (v >= 1e6) return (v/1e6).toLocaleString(undefined,{maximumFractionDigits:2})+'M';
+  if (v >= 1e3) return v.toLocaleString(undefined,{maximumFractionDigits:0});
+  return v.toLocaleString(undefined,{maximumFractionDigits:2});
 }
-function setStatus(msg, isError = false) {
+function fmtPct(v) { return v == null ? '\u2014' : v.toFixed(2) + '%'; }
+function setStatus(msg, err=false) {
   const el = document.getElementById('status');
-  el.textContent = msg;
-  el.className = 'status' + (isError ? ' error' : '');
+  el.textContent = msg; el.className = 'status' + (err ? ' error' : '');
 }
-function detectChain(addr) {
-  return (addr.startsWith('0x') && addr.length === 42) ? 'base' : 'solana';
-}
+function detectChain(addr) { return (addr.startsWith('0x') && addr.length === 42) ? 'base' : 'solana'; }
+
 async function rpc(url, method, params) {
   const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
   });
   if (!resp.ok) throw new Error(`RPC request failed (${resp.status})`);
@@ -331,78 +354,86 @@ async function rpc(url, method, params) {
   if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.result;
 }
-
-// Solana RPC: user's custom URL first, then public fallbacks
 async function solanaRpc(method, params) {
   const custom = getSolanaRpc();
   const urls = custom ? [custom, ...SOLANA_RPCS] : SOLANA_RPCS;
   let lastErr;
   for (const url of urls) {
-    try {
-      return await rpc(url, method, params);
-    } catch (e) {
-      lastErr = e;
-      console.warn(`RPC ${url} failed for ${method}: ${e.message}`);
-    }
+    try { return await rpc(url, method, params); }
+    catch (e) { lastErr = e; console.warn(`RPC ${url} failed: ${e.message}`); }
   }
-  // All failed — open settings and show guidance
   document.getElementById('settingsPanel').classList.add('open');
   throw new Error('Solana RPC blocked (403). Paste a free Helius RPC URL in Settings above.');
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ── Solana: fetch token metadata ────────────────────────────
+async function solanaTokenMeta(mint) {
+  try {
+    const supply = await solanaRpc('getTokenSupply', [mint]);
+    return {
+      name: null, symbol: null,
+      totalSupply: parseFloat(supply?.value?.uiAmountString || '0'),
+      decimals: supply?.value?.decimals || 0,
+    };
+  } catch (_) { return { name: null, symbol: null, totalSupply: 0, decimals: 0 }; }
+}
+
 // ── Solana analysis ─────────────────────────────────────────
 async function analyzeSolana(mint, periodSecs) {
+  setStatus('Fetching token info...');
+  const meta = await solanaTokenMeta(mint);
+
   setStatus('Fetching top 20 holders...');
   const res = await solanaRpc('getTokenLargestAccounts', [mint]);
   const accounts = res.value;
   if (!accounts || accounts.length === 0) throw new Error('No holders found for this token.');
 
   const holders = accounts.map((a, i) => ({
-    tokenAccount: a.address,
-    currentBalance: parseFloat(a.uiAmountString),
-    decimals: a.decimals, rank: i + 1, owner: null, historicalBalance: null,
+    tokenAccount: a.address, currentBalance: parseFloat(a.uiAmountString),
+    decimals: a.decimals, rank: i + 1, owner: null, historicalBalance: null, isContract: false,
   }));
 
-  setStatus(`Resolving ${holders.length} holder wallets...`);
+  setStatus(`Resolving ${holders.length} wallets...`);
   for (let i = 0; i < holders.length; i++) {
     try {
       const info = await solanaRpc('getAccountInfo', [holders[i].tokenAccount, { encoding: 'jsonParsed' }]);
       if (info?.value?.data?.parsed?.info?.owner) holders[i].owner = info.value.data.parsed.info.owner;
+      if (info?.value?.executable) holders[i].isContract = true;
     } catch (_) {}
     if (i % 5 === 4) await sleep(150);
   }
 
   const targetTime = Math.floor(Date.now() / 1000) - periodSecs;
   for (let i = 0; i < holders.length; i++) {
-    setStatus(`History for holder ${i + 1}/${holders.length}...`);
-    try {
-      holders[i].historicalBalance = await solanaHistoricalBalance(holders[i].tokenAccount, targetTime);
-    } catch (_) {}
+    setStatus(`History ${i + 1}/${holders.length}...`);
+    try { holders[i].historicalBalance = await solanaHistoricalBalance(holders[i].tokenAccount, targetTime); }
+    catch (_) {}
   }
 
-  return holders.map(h => ({
-    rank: h.rank, holderAddress: h.tokenAccount,
-    ownerAddress: h.owner || h.tokenAccount,
-    currentBalance: h.currentBalance, historicalBalance: h.historicalBalance,
-  }));
+  return {
+    meta,
+    holders: holders.map(h => ({
+      rank: h.rank, holderAddress: h.tokenAccount,
+      ownerAddress: h.owner || h.tokenAccount,
+      currentBalance: h.currentBalance, historicalBalance: h.historicalBalance,
+      isContract: h.isContract,
+    })),
+  };
 }
 
 async function solanaHistoricalBalance(tokenAccount, targetTime) {
-  let before = undefined;
+  let before;
   for (let page = 0; page < 3; page++) {
     const opts = { limit: 500 };
     if (before) opts.before = before;
     await sleep(150);
     const sigs = await solanaRpc('getSignaturesForAddress', [tokenAccount, opts]);
     if (!sigs || sigs.length === 0) return null;
-
     for (const sig of sigs) {
       if (sig.blockTime && sig.blockTime <= targetTime) {
         await sleep(150);
-        const tx = await solanaRpc('getTransaction', [
-          sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
-        ]);
+        const tx = await solanaRpc('getTransaction', [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]);
         if (tx) { const b = extractSolBal(tx, tokenAccount); if (b !== null) return b; }
         return null;
       }
@@ -413,9 +444,7 @@ async function solanaHistoricalBalance(tokenAccount, targetTime) {
       for (let j = sigs.length - 1; j >= 0; j--) {
         if (sigs[j].blockTime && sigs[j].blockTime >= targetTime) {
           await sleep(150);
-          const tx = await solanaRpc('getTransaction', [
-            sigs[j].signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }
-          ]);
+          const tx = await solanaRpc('getTransaction', [sigs[j].signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }]);
           if (tx) { const b = extractSolBal(tx, tokenAccount); if (b !== null) return b; }
           break;
         }
@@ -437,6 +466,32 @@ function extractSolBal(tx, tokenAccount) {
   return null;
 }
 
+// ── EVM: fetch token metadata from Moralis ──────────────────
+async function evmTokenMeta(contract, chain) {
+  const moralisKey = getMoralisKey();
+  const moralisChain = MORALIS_CHAINS[chain] || MORALIS_CHAINS.base;
+  try {
+    const resp = await fetch(`${MORALIS_BASE}/erc20/metadata?chain=${moralisChain}&addresses[]=${contract}`, {
+      headers: { 'X-API-Key': moralisKey, 'Accept': 'application/json' },
+    });
+    if (!resp.ok) return { name: null, symbol: null, totalSupply: 0, decimals: 18 };
+    const data = await resp.json();
+    const tok = data?.[0] || {};
+    const dec = parseInt(tok.decimals) || 18;
+    let supply = 0;
+    try { supply = Number(BigInt(tok.total_supply || '0')) / (10 ** dec); } catch (_) {}
+    return { name: tok.name || null, symbol: tok.symbol || null, totalSupply: supply, decimals: dec };
+  } catch (_) { return { name: null, symbol: null, totalSupply: 0, decimals: 18 }; }
+}
+
+// ── EVM: check if address is contract ───────────────────────
+async function isEvmContract(addr, evmRpc) {
+  try {
+    const code = await rpc(evmRpc, 'eth_getCode', [addr, 'latest']);
+    return code && code !== '0x' && code !== '0x0';
+  } catch (_) { return false; }
+}
+
 // ── EVM analysis (Moralis + standard RPC) ───────────────────
 async function analyzeEVM(contract, chain, periodSecs) {
   const moralisKey = getMoralisKey();
@@ -444,12 +499,13 @@ async function analyzeEVM(contract, chain, periodSecs) {
     document.getElementById('settingsPanel').classList.add('open');
     throw new Error('EVM analysis requires a Moralis API key. Paste your free key above and try again.');
   }
-
   const evmRpc = EVM_RPCS[chain] || EVM_RPCS.base;
   const moralisChain = MORALIS_CHAINS[chain] || MORALIS_CHAINS.base;
 
-  // Step 1: Get top holders from Moralis
-  setStatus('Fetching top holders from Moralis...');
+  setStatus('Fetching token info...');
+  const meta = await evmTokenMeta(contract, chain);
+
+  setStatus('Fetching top holders...');
   const url = `${MORALIS_BASE}/erc20/${contract}/owners?chain=${moralisChain}&limit=20&order=DESC`;
   const resp = await fetch(url, { headers: { 'X-API-Key': moralisKey, 'Accept': 'application/json' } });
   if (resp.status === 401) throw new Error('Invalid Moralis API key. Check Settings and try again.');
@@ -458,108 +514,180 @@ async function analyzeEVM(contract, chain, periodSecs) {
   const rawHolders = data?.result || [];
   if (rawHolders.length === 0) throw new Error('No holders found. Check the contract address and chain.');
 
-  // Step 2: Get decimals
-  setStatus('Fetching token decimals...');
-  let decimals = 18;
-  try {
-    const decResult = await rpc(evmRpc, 'eth_call', [{ to: contract, data: '0x313ce567' }, 'latest']);
-    if (decResult && decResult !== '0x') decimals = parseInt(decResult, 16);
-  } catch (_) {}
-
-  // Step 3: Build holder list from Moralis response
+  const decimals = meta.decimals;
   const holders = rawHolders.slice(0, 20).map((h, i) => {
     let bal = 0;
-    try {
-      // Moralis returns balance as a string of the raw integer
-      bal = BigInt(h.balance || '0');
-      bal = Number(bal) / (10 ** decimals);
-    } catch (_) {
-      try { bal = parseFloat(h.balance_formatted || '0'); } catch (_) {}
-    }
+    try { bal = Number(BigInt(h.balance || '0')) / (10 ** decimals); }
+    catch (_) { try { bal = parseFloat(h.balance_formatted || '0'); } catch (_) {} }
     return {
-      rank: i + 1, holderAddress: h.owner_address,
-      ownerAddress: h.owner_address, currentBalance: bal, historicalBalance: null,
+      rank: i + 1, holderAddress: h.owner_address, ownerAddress: h.owner_address,
+      currentBalance: bal, historicalBalance: null, isContract: false,
     };
   });
 
-  // Step 4: Historical balances via eth_call at past block
+  // Check contract vs EOA for top 5 (to avoid rate limits)
+  setStatus('Checking wallet types...');
+  for (let i = 0; i < Math.min(holders.length, 5); i++) {
+    holders[i].isContract = await isEvmContract(holders[i].holderAddress, evmRpc);
+    if (i % 2 === 1) await sleep(100);
+  }
+
   setStatus('Getting current block...');
   const blockHex = await rpc(evmRpc, 'eth_blockNumber', []);
   const currentBlock = parseInt(blockHex, 16);
-  const blockTime = chain === 'arbitrum' ? 0.25 : (chain === 'eth' ? 12.0 : 2.0);
-  const historicalBlock = Math.max(1, currentBlock - Math.floor(periodSecs / blockTime));
+  const bt = chain === 'arbitrum' ? 0.25 : (chain === 'eth' ? 12.0 : 2.0);
+  const historicalBlock = Math.max(1, currentBlock - Math.floor(periodSecs / bt));
 
   for (let i = 0; i < holders.length; i++) {
     setStatus(`Historical balance ${i + 1}/${holders.length}...`);
     try {
       const padded = holders[i].holderAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-      const callData = '0x70a08231' + padded;
-      const result = await rpc(evmRpc, 'eth_call', [
-        { to: contract, data: callData }, '0x' + historicalBlock.toString(16)
-      ]);
-      if (result && result !== '0x') {
-        holders[i].historicalBalance = Number(BigInt(result)) / (10 ** decimals);
-      }
+      const result = await rpc(evmRpc, 'eth_call', [{ to: contract, data: '0x70a08231' + padded }, '0x' + historicalBlock.toString(16)]);
+      if (result && result !== '0x') holders[i].historicalBalance = Number(BigInt(result)) / (10 ** decimals);
     } catch (_) {}
     if (i % 4 === 3) await sleep(100);
   }
 
-  return holders;
+  return { meta, holders };
 }
 
 // ── Signal classification ───────────────────────────────────
-function classify(holders) {
+function classify(holders, totalSupply) {
   return holders.map(h => {
     const cur = h.currentBalance, hist = h.historicalBalance;
+    const pctSupply = totalSupply > 0 ? (cur / totalSupply) * 100 : null;
     let signal, change = null, changePct = null;
-    if (hist == null) { signal = 'NEW'; }
-    else {
+
+    if (hist == null) {
+      signal = 'NEW';
+    } else if (hist === 0 && cur > 0) {
+      signal = 'FRESH';
+      change = cur; changePct = null;
+    } else if (cur === 0 && hist > 0) {
+      signal = 'EXIT';
+      change = -hist; changePct = -100;
+    } else {
       change = cur - hist;
       const eps = Math.max(cur, hist, 1) * 1e-9;
       if (Math.abs(change) < eps) { signal = 'HOLD'; change = 0; }
-      else if (change > 0) signal = 'BUY';
-      else signal = 'SELL';
-      if (hist !== 0) changePct = (change / hist) * 100;
+      else {
+        changePct = hist !== 0 ? (change / hist) * 100 : null;
+        if (change > 0) signal = (changePct !== null && changePct >= 50) ? 'STRONG_BUY' : 'BUY';
+        else signal = (changePct !== null && changePct <= -50) ? 'STRONG_SELL' : 'SELL';
+      }
     }
-    return { ...h, signal, change, changePct };
+    return { ...h, signal, change, changePct, pctSupply };
   });
 }
 
+// ── Compute analytics ───────────────────────────────────────
+function computeAnalytics(classified, totalSupply) {
+  const top5 = classified.slice(0, 5).reduce((s, h) => s + (h.pctSupply || 0), 0);
+  const top10 = classified.slice(0, 10).reduce((s, h) => s + (h.pctSupply || 0), 0);
+  const top20 = classified.reduce((s, h) => s + (h.pctSupply || 0), 0);
+
+  let netFlow = 0, totalBought = 0, totalSold = 0;
+  let buying = 0, selling = 0, holding = 0, fresh = 0, exits = 0;
+  for (const h of classified) {
+    if (h.change != null) {
+      netFlow += h.change;
+      if (h.change > 0) totalBought += h.change;
+      else totalSold += Math.abs(h.change);
+    }
+    if (h.signal === 'STRONG_BUY' || h.signal === 'BUY') buying++;
+    else if (h.signal === 'STRONG_SELL' || h.signal === 'SELL') selling++;
+    else if (h.signal === 'HOLD') holding++;
+    else if (h.signal === 'FRESH') { fresh++; buying++; }
+    else if (h.signal === 'EXIT') { exits++; selling++; }
+  }
+
+  // Concentration risk: low/medium/high/extreme
+  let risk, riskColor;
+  if (top5 >= 80) { risk = 'EXTREME'; riskColor = '#7f1d1d'; }
+  else if (top5 >= 50) { risk = 'HIGH'; riskColor = '#dc2626'; }
+  else if (top5 >= 25) { risk = 'MEDIUM'; riskColor = '#eab308'; }
+  else { risk = 'LOW'; riskColor = '#22c55e'; }
+
+  // Whale pressure: ratio of buyers to sellers weighted by volume
+  let pressure, pressureColor;
+  const ratio = totalSold > 0 ? totalBought / totalSold : (totalBought > 0 ? 99 : 1);
+  if (ratio >= 3) { pressure = 'HEAVY BUY'; pressureColor = '#16a34a'; }
+  else if (ratio >= 1.5) { pressure = 'BUY LEAN'; pressureColor = '#22c55e'; }
+  else if (ratio >= 0.67) { pressure = 'NEUTRAL'; pressureColor = '#eab308'; }
+  else if (ratio >= 0.33) { pressure = 'SELL LEAN'; pressureColor = '#ef4444'; }
+  else { pressure = 'HEAVY SELL'; pressureColor = '#dc2626'; }
+
+  return { top5, top10, top20, netFlow, totalBought, totalSold, buying, selling, holding, fresh, exits, risk, riskColor, pressure, pressureColor };
+}
+
 // ── Render ──────────────────────────────────────────────────
-function render(classified) {
-  const buying = classified.filter(h => h.signal === 'BUY').length;
-  const selling = classified.filter(h => h.signal === 'SELL').length;
-  const holding = classified.filter(h => h.signal === 'HOLD').length;
-  const unknown = classified.filter(h => h.signal === 'NEW').length;
+function render(classified, meta, chain, analytics) {
+  // Token header
+  const hdr = document.getElementById('tokenHeader');
+  const nameStr = meta.name || 'Unknown Token';
+  const symStr = meta.symbol ? `$${meta.symbol}` : '';
+  const supplyStr = meta.totalSupply > 0 ? `Supply: ${fmtBal(meta.totalSupply)}` : '';
+  hdr.innerHTML = `<span class="token-name">${nameStr}</span>
+    <span class="token-symbol">${symStr}</span>
+    <span class="token-supply">${supplyStr}</span>`;
 
-  let sentiment, sentColor;
-  if (buying > selling) { sentiment = 'ACCUMULATION'; sentColor = SIGNAL_COLORS.BUY; }
-  else if (selling > buying) { sentiment = 'DISTRIBUTION'; sentColor = SIGNAL_COLORS.SELL; }
-  else { sentiment = 'NEUTRAL'; sentColor = '#eab308'; }
+  // Metrics cards
+  const a = analytics;
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card">
+      <div class="mc-label">Whale Pressure</div>
+      <div class="mc-value" style="color:${a.pressureColor}">${a.pressure}</div>
+      <div class="mc-sub">${a.buying} buying / ${a.selling} selling / ${a.holding} hold</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Net Flow (Top 20)</div>
+      <div class="mc-value" style="color:${a.netFlow >= 0 ? 'var(--green)' : 'var(--red)'}">
+        ${a.netFlow >= 0 ? '+' : ''}${fmtBal(a.netFlow)}
+      </div>
+      <div class="mc-sub">In: ${fmtBal(a.totalBought)} / Out: ${fmtBal(a.totalSold)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Concentration Risk</div>
+      <div class="mc-value"><span class="risk-badge" style="background:${a.riskColor}">${a.risk}</span></div>
+      <div class="mc-sub">Top 5: ${a.top5.toFixed(1)}% / Top 10: ${a.top10.toFixed(1)}%</div>
+    </div>
+    <div class="metric-card">
+      <div class="mc-label">Top 20 Ownership</div>
+      <div class="mc-value">${a.top20.toFixed(1)}%</div>
+      <div class="mc-sub">${a.fresh ? a.fresh + ' fresh wallet(s) ' : ''}${a.exits ? a.exits + ' exit(s)' : ''}</div>
+    </div>`;
 
-  document.getElementById('summaryBar').innerHTML = `
-    <div class="summary-stat"><div class="val" style="color:var(--green)">${buying}</div><div class="lbl">Buying</div></div>
-    <div class="summary-stat"><div class="val" style="color:var(--red)">${selling}</div><div class="lbl">Selling</div></div>
-    <div class="summary-stat"><div class="val">${holding}</div><div class="lbl">Holding</div></div>
-    ${unknown ? `<div class="summary-stat"><div class="val" style="color:var(--blue)">${unknown}</div><div class="lbl">New</div></div>` : ''}
-    <div class="sentiment-badge" style="background:${sentColor}">${sentiment}</div>`;
-
+  // Table
+  const explorerFn = EXPLORER[chain] || EXPLORER.solana;
   document.getElementById('tableBody').innerHTML = classified.map(h => {
-    let cs = '\u2014';
+    const sig = SIG[h.signal] || SIG.NEW;
+    let changeStr = '\u2014', pctStr = '\u2014';
     if (h.change != null) {
       const p = h.change > 0 ? '+' : '';
-      const pct = h.changePct != null ? ` (${p}${h.changePct.toFixed(1)}%)` : '';
-      cs = `${p}${fmtBal(Math.abs(h.change))}${pct}`;
+      changeStr = `${p}${fmtBal(Math.abs(h.change))}`;
     }
-    const c = SIGNAL_COLORS[h.signal] || '#52525b';
-    return `<tr><td>${h.rank}</td><td class="mono">${shorten(h.ownerAddress,6)}</td>
-      <td class="r">${fmtBal(h.currentBalance)}</td><td class="r" style="color:${c}">${cs}</td>
-      <td><span class="signal" style="background:${c}">${h.signal}</span></td></tr>`;
+    if (h.changePct != null) {
+      const p = h.changePct > 0 ? '+' : '';
+      pctStr = `${p}${h.changePct.toFixed(1)}%`;
+    }
+    const pctBar = h.pctSupply != null ? `<span class="pct-bar" style="width:${Math.min(h.pctSupply, 100) * 0.8}px"></span>${h.pctSupply.toFixed(2)}%` : '\u2014';
+    const tag = h.isContract ? '<span class="wallet-tag contract">CONTRACT</span>' : '';
+    const addrDisplay = shorten(h.ownerAddress, 6);
+    return `<tr>
+      <td>${h.rank}</td>
+      <td class="mono"><a class="addr-link" href="${explorerFn(h.ownerAddress)}" target="_blank" rel="noopener">${addrDisplay}</a>${tag}</td>
+      <td class="r">${fmtBal(h.currentBalance)}</td>
+      <td class="r">${pctBar}</td>
+      <td class="r" style="color:${sig.color}">${changeStr}</td>
+      <td class="r" style="color:${sig.color}">${pctStr}</td>
+      <td><span class="signal" style="background:${sig.color}">${sig.label}</span></td>
+    </tr>`;
   }).join('');
 
+  // Charts
   const labels = classified.map(h => shorten(h.ownerAddress, 3));
   const changes = classified.map(h => h.change ?? 0);
-  const colors = classified.map(h => SIGNAL_COLORS[h.signal]);
+  const colors = classified.map(h => (SIG[h.signal] || SIG.NEW).color);
 
   if (changeChart) changeChart.destroy();
   changeChart = new Chart(document.getElementById('changeChart'), {
@@ -568,23 +696,49 @@ function render(classified) {
     options: {
       responsive: true, plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color: '#52525b', font: { size: 9 } }, grid: { display: false } },
+        x: { ticks: { color: '#52525b', font: { size: 8 } }, grid: { display: false } },
         y: { ticks: { color: '#52525b' }, grid: { color: '#27272a' } }
       }
     }
   });
 
-  const sentArr = [buying, selling, holding, unknown];
-  const sentLbls = ['Buying','Selling','Holding','New'].filter((_,i) => sentArr[i] > 0);
-  const sentVals = sentArr.filter(v => v > 0);
-  const sentClrs = ['#22c55e','#ef4444','#52525b','#3b82f6'].filter((_,i) => sentArr[i] > 0);
+  // Sentiment doughnut
+  const sentMap = { buying: a.buying, selling: a.selling, holding: a.holding };
+  const sentLbls = [], sentVals = [], sentClrs = [];
+  if (sentMap.buying) { sentLbls.push('Buying'); sentVals.push(sentMap.buying); sentClrs.push('#22c55e'); }
+  if (sentMap.selling) { sentLbls.push('Selling'); sentVals.push(sentMap.selling); sentClrs.push('#ef4444'); }
+  if (sentMap.holding) { sentLbls.push('Holding'); sentVals.push(sentMap.holding); sentClrs.push('#52525b'); }
 
   if (sentimentChart) sentimentChart.destroy();
   sentimentChart = new Chart(document.getElementById('sentimentChart'), {
     type: 'doughnut',
     data: { labels: sentLbls, datasets: [{ data: sentVals, backgroundColor: sentClrs, borderWidth: 0 }] },
     options: { responsive: true, cutout: '60%',
-      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 10, font: { size: 11 } } } } }
+      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 } } } } }
+  });
+
+  // Concentration horizontal bar
+  const concData = [a.top5, a.top10 - a.top5, a.top20 - a.top10, Math.max(0, 100 - a.top20)];
+  if (concChart) concChart.destroy();
+  concChart = new Chart(document.getElementById('concChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Supply Distribution'],
+      datasets: [
+        { label: 'Top 5', data: [concData[0]], backgroundColor: '#ef4444', borderRadius: 0 },
+        { label: 'Top 6-10', data: [concData[1]], backgroundColor: '#f97316', borderRadius: 0 },
+        { label: 'Top 11-20', data: [concData[2]], backgroundColor: '#eab308', borderRadius: 0 },
+        { label: 'Others', data: [concData[3]], backgroundColor: '#27272a', borderRadius: 0 },
+      ]
+    },
+    options: {
+      responsive: true, indexAxis: 'y',
+      scales: {
+        x: { stacked: true, max: 100, ticks: { color: '#52525b', callback: v => v + '%' }, grid: { color: '#27272a' } },
+        y: { stacked: true, display: false }
+      },
+      plugins: { legend: { position: 'bottom', labels: { color: '#71717a', padding: 8, font: { size: 10 }, boxWidth: 12 } } }
+    }
   });
 
   document.getElementById('results').classList.add('visible');
@@ -600,15 +754,18 @@ async function runAnalysis() {
   document.getElementById('results').classList.remove('visible');
 
   try {
-    const chain = detectChain(address);
+    currentChain = detectChain(address);
     const periodSecs = PERIODS[selectedPeriod];
-    let holders;
-    if (chain === 'solana') holders = await analyzeSolana(address, periodSecs);
-    else holders = await analyzeEVM(address, chain, periodSecs);
+    let result;
+    if (currentChain === 'solana') result = await analyzeSolana(address, periodSecs);
+    else result = await analyzeEVM(address, currentChain, periodSecs);
+
+    const { meta, holders } = result;
     if (!holders || holders.length === 0) throw new Error('No holders found.');
-    const classified = classify(holders);
-    render(classified);
-    setStatus(`Done \u2014 ${holders.length} holders analyzed on ${chain}.`);
+    const classified = classify(holders, meta.totalSupply);
+    const analytics = computeAnalytics(classified, meta.totalSupply);
+    render(classified, meta, currentChain, analytics);
+    setStatus(`Done \u2014 ${holders.length} holders analyzed on ${currentChain} (${selectedPeriod}).`);
   } catch (e) {
     setStatus(e.message || 'Something went wrong.', true);
     console.error(e);
