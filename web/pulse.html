@@ -570,48 +570,51 @@ tbody td:nth-child(2) {
   <!-- Info Panel (hidden by default) -->
   <div class="info-panel" id="info-panel">
     <h3>What is Pulse?</h3>
-    <p>Pulse finds Solana tokens where <strong>attention is accelerating right now</strong>. Instead of showing
-    what's already trending, it detects the crowd forming before volume catches up. Tokens are scored by
-    comparing their <em>last 5 minutes</em> of activity against their <em>hourly average</em> &mdash;
-    if the ratio is above 1, attention is accelerating.</p>
+    <p>Pulse detects Solana tokens showing signs of <strong>organic accumulation</strong> &mdash; steady buying
+    across multiple timeframes, volume building gradually, price holding or rising. It targets the <strong>$50K&ndash;$200K MCap</strong>
+    sweet spot where breakout candidates live. Tokens are penalized for pump-and-dump patterns (extreme spikes,
+    heavy sell pressure, price crashes).</p>
 
     <div class="info-grid">
-      <div class="info-item"><span class="info-key">Score</span><span class="info-val">Attention acceleration. Higher = more activity right now vs recent average. Hover for breakdown.</span></div>
-      <div class="info-item"><span class="info-key">5m / 1h %</span><span class="info-val">Price change over the last 5 minutes and 1 hour.</span></div>
-      <div class="info-item"><span class="info-key">Vol 5m</span><span class="info-val">Dollar volume traded in the last 5 minutes.</span></div>
-      <div class="info-item"><span class="info-key">Txn 5m</span><span class="info-val">Number of trades in 5 min. (buys/sells) shows the split.</span></div>
-      <div class="info-item"><span class="info-key">Liq</span><span class="info-val">Total liquidity in the pool. Low liq = higher risk.</span></div>
-      <div class="info-item"><span class="info-key">MCap</span><span class="info-val">Fully diluted market cap of the token.</span></div>
-      <div class="info-item"><span class="info-key">Age</span><span class="info-val">How old the trading pair is. Newer tokens get a score boost.</span></div>
-      <div class="info-item"><span class="info-key">Boost</span><span class="info-val">DexScreener paid promotions. Someone is spending money to drive attention.</span></div>
+      <div class="info-item"><span class="info-key">Score</span><span class="info-val">Accumulation strength. Higher = more consistent buying, building volume, and price stability. Hover for breakdown.</span></div>
+      <div class="info-item"><span class="info-key">Buy %</span><span class="info-val">Percentage of transactions that are buys across 1h/6h/24h. Above 55% across all = strong signal.</span></div>
+      <div class="info-item"><span class="info-key">Vol 1h</span><span class="info-val">Dollar volume in the last hour. Compared to 6h and 24h averages to detect building trends.</span></div>
+      <div class="info-item"><span class="info-key">Txn 5m</span><span class="info-val">Recent trades with buy/sell split. Heavy sells (70%+) triggers a score penalty.</span></div>
+      <div class="info-item"><span class="info-key">Liq</span><span class="info-val">Pool liquidity. Min $10K required. Low liq = high slippage and rug risk.</span></div>
+      <div class="info-item"><span class="info-key">MCap</span><span class="info-val">Market cap. Sweet spot is $50K&ndash;$200K. Filtered to $50K&ndash;$5M range.</span></div>
+      <div class="info-item"><span class="info-key">Age</span><span class="info-val">Pair age. Must be at least 10 min old. Filters out instant rugs.</span></div>
+      <div class="info-item"><span class="info-key">Boost</span><span class="info-val">DexScreener paid promotions. Minor scoring bonus &mdash; someone is spending to drive attention.</span></div>
     </div>
 
     <div class="info-score-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--score-hot)"></div> Hot (60+) &mdash; strong acceleration</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--score-warm)"></div> Warm (25-59) &mdash; building</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--score-cold)"></div> Cold (&lt;25) &mdash; low signal</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--score-hot)"></div> Strong (60+) &mdash; sustained accumulation</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--score-warm)"></div> Building (25-59) &mdash; early signs</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--score-cold)"></div> Weak (&lt;25) &mdash; low conviction</div>
     </div>
   </div>
 
   <!-- Filters -->
   <div class="filters">
     <div class="filter-group">
-      <label>Min Liquidity</label>
-      <input type="text" id="f-min-liq" value="1000" placeholder="1000">
+      <label>Min Liq</label>
+      <input type="text" id="f-min-liq" value="10000" placeholder="10000">
+    </div>
+    <div class="filter-group">
+      <label>Min MCap</label>
+      <input type="text" id="f-min-mcap" value="50000" placeholder="50000">
     </div>
     <div class="filter-group">
       <label>Max MCap</label>
-      <input type="text" id="f-max-mcap" value="50000000" placeholder="50M">
+      <input type="text" id="f-max-mcap" value="5000000" placeholder="5M">
     </div>
     <div class="filter-sep"></div>
     <div class="filter-group">
       <label>Max Age</label>
       <select id="f-max-age">
-        <option value="6">6h</option>
-        <option value="24" selected>24h</option>
+        <option value="24">24h</option>
         <option value="48">48h</option>
         <option value="72">72h</option>
-        <option value="168">7d</option>
+        <option value="168" selected>7d</option>
       </select>
     </div>
     <div class="filter-group">
@@ -707,8 +710,8 @@ tbody td:nth-child(2) {
 
 <!-- ── Footer ──────────────────────────────────────────────────── -->
 <div class="footer">
-  Data sourced from DexScreener API. Scores reflect attention acceleration (volume &amp; transaction rate of change vs hourly average).<br>
-  Click any row to open it on DexScreener. Hover the Score column for a detailed breakdown. Not financial advice.
+  Data sourced from DexScreener API. Scores detect accumulation patterns: sustained buying across 1h/6h/24h, building volume, and price stability in the $50K&ndash;$5M MCap range.<br>
+  Click any row to open on DexScreener. Hover the Score column for a detailed breakdown. Not financial advice.
 </div>
 
 <script>
@@ -801,8 +804,9 @@ function getFilters() {
   };
   return {
     minLiq: parse('f-min-liq', 0),
+    minMcap: parse('f-min-mcap', 0),
     maxMcap: parse('f-max-mcap', Infinity),
-    maxAge: parse('f-max-age', 72),
+    maxAge: parse('f-max-age', 168),
     minScore: parse('f-min-score', 0),
     boostedOnly: document.getElementById('f-boosted').checked,
     search: document.getElementById('f-search').value.toLowerCase().trim(),
@@ -813,6 +817,7 @@ function applyFilters(list) {
   const f = getFilters();
   return list.filter(t => {
     if (t.liquidity_usd < f.minLiq) return false;
+    if (t.market_cap < f.minMcap && t.market_cap > 0) return false;
     if (t.market_cap > f.maxMcap && t.market_cap > 0) return false;
     if (t.age_hours < 9000 && t.age_hours > f.maxAge) return false;
     if (t.score < f.minScore) return false;
@@ -893,7 +898,7 @@ function renderTable() {
       <td>${fmtAge(t.age_hours)}</td>
       <td>${t.boost_active ? '<span class="boost-badge">' + t.boost_active + '</span>' : '<span class="neutral">--</span>'}</td>
       <td>${sparklineSvg(t.history, 72, 20)}</td>
-      <td><div class="score-cell" data-score='${JSON.stringify(t.components || {})}' data-factors='${JSON.stringify({age:t.age_factor,vr:t.vol_ratio,tr:t.txn_ratio,bp:t.buy_pressure})}'>
+      <td><div class="score-cell" data-score='${JSON.stringify(t.components || {})}' data-factors='${JSON.stringify({penalty:t.penalty||0,br1:t.buy_ratio_h1,br6:t.buy_ratio_h6,br24:t.buy_ratio_h24,vb:t.vol_build_ratio,vt:t.vol_trend_ratio})}'>
         <div class="score-bar-bg"><div class="score-bar-fill" style="width:${barWidth}%;background:${scoreColor(t.score)}"></div></div>
         <span class="score-value" style="color:${scoreColor(t.score)}">${t.score.toFixed(0)}</span>
       </div></td>
@@ -925,18 +930,18 @@ document.addEventListener('mousemove', (e) => {
   const fac = JSON.parse(cell.dataset.factors || '{}');
 
   tooltip.innerHTML = `
-    <div class="tooltip-header">Score Breakdown</div>
-    <div class="tooltip-row"><span>Volume Acceleration</span><span class="tval">${comp.volume_accel ?? '--'} / 30</span></div>
-    <div class="tooltip-row"><span>Transaction Acceleration</span><span class="tval">${comp.txn_accel ?? '--'} / 25</span></div>
-    <div class="tooltip-row"><span>Boost Signal</span><span class="tval">${comp.boost ?? '--'} / 20</span></div>
-    <div class="tooltip-row"><span>Price Momentum</span><span class="tval">${comp.momentum ?? '--'} / 15</span></div>
-    <div class="tooltip-row"><span>Vol / Liquidity</span><span class="tval">${comp.vol_liq ?? '--'} / 10</span></div>
+    <div class="tooltip-header">Accumulation Score</div>
+    <div class="tooltip-row"><span>Buy Pressure (h1/h6/h24)</span><span class="tval">${comp.buy_pressure ?? '--'} / 30</span></div>
+    <div class="tooltip-row"><span>Volume Trend</span><span class="tval">${comp.volume_trend ?? '--'} / 25</span></div>
+    <div class="tooltip-row"><span>Price Quality</span><span class="tval">${comp.price_quality ?? '--'} / 20</span></div>
+    <div class="tooltip-row"><span>MCap Fit ($50K-$200K)</span><span class="tval">${comp.mcap_fit ?? '--'} / 15</span></div>
+    <div class="tooltip-row"><span>Boost</span><span class="tval">${comp.boost ?? '--'} / 10</span></div>
+    ${(fac.penalty ?? 0) > 0 ? '<div class="tooltip-row"><span style="color:var(--red)">Penalty</span><span class="tval" style="color:var(--red)">-' + fac.penalty + '</span></div>' : ''}
     <div class="tooltip-divider"></div>
-    <div class="tooltip-row"><span>Age Multiplier</span><span class="tval">${fac.age ?? '--'}x</span></div>
-    <div class="tooltip-row"><span>5m / 1h Vol Ratio</span><span class="tval">${fac.vr ?? '--'}x avg</span></div>
-    <div class="tooltip-row"><span>5m / 1h Txn Ratio</span><span class="tval">${fac.tr ?? '--'}x avg</span></div>
-    <div class="tooltip-row"><span>Buy Pressure</span><span class="tval">${((fac.bp ?? 0) * 100).toFixed(0)}%</span></div>
-    <div class="tooltip-hint">Ratios &gt; 1x mean the last 5 min is above the hourly average = accelerating</div>
+    <div class="tooltip-row"><span>Buy % (1h / 6h / 24h)</span><span class="tval">${((fac.br1 ?? 0) * 100).toFixed(0)}% / ${((fac.br6 ?? 0) * 100).toFixed(0)}% / ${((fac.br24 ?? 0) * 100).toFixed(0)}%</span></div>
+    <div class="tooltip-row"><span>Vol Build (1h vs 6h avg)</span><span class="tval">${fac.vb ?? '--'}x</span></div>
+    <div class="tooltip-row"><span>Vol Trend (6h vs 24h avg)</span><span class="tval">${fac.vt ?? '--'}x</span></div>
+    <div class="tooltip-hint">Buy % &gt; 55% across all timeframes = sustained accumulation</div>
   `;
   tooltip.classList.add('visible');
 
@@ -969,7 +974,7 @@ document.querySelectorAll('thead th[data-sort]').forEach(th => {
 });
 
 /* ── Filter event listeners ────────────────────────────────────── */
-['f-min-liq', 'f-max-mcap', 'f-max-age', 'f-min-score', 'f-boosted', 'f-search'].forEach(id => {
+['f-min-liq', 'f-min-mcap', 'f-max-mcap', 'f-max-age', 'f-min-score', 'f-boosted', 'f-search'].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener('input', renderTable);
   el.addEventListener('change', renderTable);
