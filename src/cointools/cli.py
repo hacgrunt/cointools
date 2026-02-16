@@ -456,3 +456,38 @@ async def _fetch_metadata_wrapper(mints: list[str]) -> dict:
 
     async with httpx.AsyncClient() as client:
         return await fetch_token_metadata(client, mints)
+
+
+# ── Pulse: real-time attention scanner ───────────────────────────
+
+
+@cli.command()
+@click.option(
+    "--port",
+    type=int,
+    default=8420,
+    help="Port to run the dashboard server on (default: 8420).",
+)
+@click.option(
+    "--host",
+    type=str,
+    default="0.0.0.0",
+    help="Host to bind to (default: 0.0.0.0).",
+)
+def pulse(port: int, host: str) -> None:
+    """Launch the Pulse real-time attention scanner dashboard.
+
+    Starts a web server that polls DexScreener for Solana tokens where
+    attention is accelerating.  Open http://localhost:<port> in a browser
+    to view the dashboard.
+    """
+    from cointools.pulse.server import PulseServer
+
+    console.print(
+        f"\n[bold green]PULSE[/bold green] — Solana Attention Scanner\n"
+        f"Dashboard: [bold]http://localhost:{port}[/bold]\n"
+        f"Press Ctrl+C to stop.\n"
+    )
+
+    server = PulseServer(host=host, port=port)
+    server.run()

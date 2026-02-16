@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PULSE — Solana Attention Scanner</title>
+<style>
+/* ── Reset & Base ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #08080c;
+  --bg-card: #0e0e14;
+  --bg-row-hover: #14141e;
+  --border: #1a1a28;
+  --text: #d0d0d8;
+  --text-dim: #606070;
+  --text-muted: #404050;
+  --green: #00e87b;
+  --green-dim: #00a858;
+  --red: #ff3b4a;
+  --red-dim: #b82a35;
+  --amber: #ffb020;
+  --blue: #4488ff;
+  --score-hot: #00e87b;
+  --score-warm: #ffb020;
+  --score-cold: #404050;
+  --font: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.4;
+  overflow-x: hidden;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--green);
+}
+
+.logo-sub {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.header-stats {
+  display: flex;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.header-stats span { white-space: nowrap; }
+.stat-value { color: var(--text); font-weight: 600; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+
+.conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.conn-dot.connecting { background: var(--amber); }
+.conn-dot.disconnected { background: var(--red); }
+
+/* ── Filters ───────────────────────────────────────────────────── */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-dim);
+}
+
+.filter-group label { white-space: nowrap; }
+
+.filter-group input, .filter-group select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  width: 80px;
+}
+
+.filter-group input:focus, .filter-group select:focus {
+  outline: none;
+  border-color: var(--green-dim);
+}
+
+.filter-search {
+  margin-left: auto;
+}
+
+.filter-search input {
+  width: 160px;
+}
+
+/* ── Table ─────────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  padding: 0 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 1100px;
+}
+
+thead th {
+  position: sticky;
+  top: 68px;
+  z-index: 10;
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--border);
+  padding: 8px 6px;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+thead th:hover { color: var(--text); }
+thead th.sort-active { color: var(--green); }
+thead th.sort-active::after { content: ' \u25BC'; font-size: 8px; }
+thead th.sort-active.sort-asc::after { content: ' \u25B2'; }
+
+thead th:first-child { text-align: center; }
+thead th:nth-child(2) { text-align: left; }
+
+/* Column widths */
+.col-rank { width: 36px; }
+.col-token { width: 140px; }
+.col-price { width: 90px; }
+.col-chg5m { width: 64px; }
+.col-chg1h { width: 64px; }
+.col-vol5m { width: 72px; }
+.col-vol1h { width: 78px; }
+.col-txn5m { width: 70px; }
+.col-liq { width: 72px; }
+.col-mcap { width: 78px; }
+.col-age { width: 52px; }
+.col-boost { width: 48px; }
+.col-spark { width: 80px; }
+.col-score { width: 90px; }
+
+tbody tr {
+  border-bottom: 1px solid #111118;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+tbody tr:hover { background: var(--bg-row-hover); }
+
+tbody td {
+  padding: 7px 6px;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+tbody td:first-child { text-align: center; color: var(--text-dim); }
+tbody td:nth-child(2) { text-align: left; }
+
+.token-name {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.token-symbol {
+  font-weight: 700;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.token-full {
+  font-size: 9px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+.neutral { color: var(--text-dim); }
+
+.boost-badge {
+  display: inline-block;
+  background: rgba(255, 176, 32, 0.15);
+  color: var(--amber);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Score bar */
+.score-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.score-bar-bg {
+  width: 48px;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.5s ease;
+}
+
+.score-value {
+  font-weight: 700;
+  font-size: 12px;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Sparkline */
+.sparkline {
+  display: block;
+}
+
+/* Flash animation for value changes */
+@keyframes flash-green {
+  0% { background: rgba(0, 232, 123, 0.25); }
+  100% { background: transparent; }
+}
+
+@keyframes flash-red {
+  0% { background: rgba(255, 59, 74, 0.25); }
+  100% { background: transparent; }
+}
+
+.flash-up { animation: flash-green 1s ease-out; }
+.flash-down { animation: flash-red 1s ease-out; }
+
+/* ── Empty / Loading state ─────────────────────────────────────── */
+.state-msg {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.state-msg .spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Score breakdown tooltip ───────────────────────────────────── */
+.tooltip {
+  display: none;
+  position: fixed;
+  z-index: 200;
+  background: #16161e;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 11px;
+  pointer-events: none;
+  min-width: 200px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+}
+
+.tooltip.visible { display: block; }
+
+.tooltip-header {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: var(--green);
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  color: var(--text-dim);
+}
+
+.tooltip-row .tval { color: var(--text); font-weight: 600; }
+
+.tooltip-divider {
+  border-top: 1px solid var(--border);
+  margin: 6px 0;
+}
+
+/* ── Footer ────────────────────────────────────────────────────── */
+.footer {
+  padding: 12px 16px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .header { flex-wrap: wrap; }
+  .header-stats { flex-wrap: wrap; gap: 8px; }
+  .filters { gap: 8px; }
+  table { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">PULSE</div>
+      <div class="logo-sub">Solana Attention Scanner</div>
+    </div>
+    <div class="header-stats">
+      <span>Tokens: <span class="stat-value" id="stat-tokens">--</span></span>
+      <span>Discovered: <span class="stat-value" id="stat-discovered">--</span></span>
+      <span>Poll: <span class="stat-value" id="stat-poll">--</span></span>
+      <span>Updated: <span class="stat-value" id="stat-updated">--</span></span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="conn-status">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-label">Connecting</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filters ─────────────────────────────────────────────────── -->
+<div class="filters">
+  <div class="filter-group">
+    <label>Min Liq</label>
+    <input type="text" id="f-min-liq" value="1000" placeholder="1000">
+  </div>
+  <div class="filter-group">
+    <label>Max MCap</label>
+    <input type="text" id="f-max-mcap" value="50000000" placeholder="50M">
+  </div>
+  <div class="filter-group">
+    <label>Max Age</label>
+    <select id="f-max-age">
+      <option value="6">6h</option>
+      <option value="24" selected>24h</option>
+      <option value="48">48h</option>
+      <option value="72">72h</option>
+      <option value="168">7d</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Min Score</label>
+    <input type="text" id="f-min-score" value="0" placeholder="0">
+  </div>
+  <div class="filter-group">
+    <label>Boosted Only</label>
+    <input type="checkbox" id="f-boosted">
+  </div>
+  <div class="filter-group filter-search">
+    <input type="text" id="f-search" placeholder="Search token...">
+  </div>
+</div>
+
+<!-- ── Table ───────────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table id="token-table">
+    <thead>
+      <tr>
+        <th class="col-rank" data-sort="rank">#</th>
+        <th class="col-token" data-sort="symbol">Token</th>
+        <th class="col-price" data-sort="price_usd">Price</th>
+        <th class="col-chg5m" data-sort="price_change_m5">5m %</th>
+        <th class="col-chg1h" data-sort="price_change_h1">1h %</th>
+        <th class="col-vol5m" data-sort="volume_m5">Vol 5m</th>
+        <th class="col-vol1h" data-sort="volume_h1">Vol 1h</th>
+        <th class="col-txn5m" data-sort="txns_m5">Txn 5m</th>
+        <th class="col-liq" data-sort="liquidity_usd">Liq</th>
+        <th class="col-mcap" data-sort="market_cap">MCap</th>
+        <th class="col-age" data-sort="age_hours">Age</th>
+        <th class="col-boost" data-sort="boost_active">Boost</th>
+        <th class="col-spark">Trend</th>
+        <th class="col-score sort-active" data-sort="score">Score</th>
+      </tr>
+    </thead>
+    <tbody id="token-body">
+    </tbody>
+  </table>
+  <div class="state-msg" id="state-msg">
+    <div class="spinner"></div><br>
+    Connecting to scanner...
+  </div>
+</div>
+
+<!-- ── Tooltip ─────────────────────────────────────────────────── -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<div class="footer">
+  Data from DexScreener API. Scores based on attention acceleration (volume & transaction rate of change).
+  Not financial advice. DYOR.
+</div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────── */
+let tokens = [];
+let prevScores = {};
+let sortCol = 'score';
+let sortAsc = false;
+let ws = null;
+let reconnectDelay = 1000;
+
+/* ── Formatting helpers ────────────────────────────────────────── */
+function fmtUsd(v) {
+  if (v === 0 || v == null) return '--';
+  if (v >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+  if (v >= 1) return '$' + v.toFixed(2);
+  if (v >= 0.001) return '$' + v.toFixed(4);
+  if (v >= 0.000001) return '$' + v.toFixed(6);
+  return '$' + v.toExponential(2);
+}
+
+function fmtPrice(v) {
+  if (v === 0 || v == null) return '--';
+  if (v >= 1000) return '$' + v.toLocaleString(undefined, {maximumFractionDigits: 2});
+  if (v >= 1) return '$' + v.toFixed(4);
+  if (v >= 0.001) return '$' + v.toFixed(6);
+  if (v >= 0.000001) return '$' + v.toFixed(8);
+  return '$' + v.toExponential(2);
+}
+
+function fmtPct(v) {
+  if (v == null) return '--';
+  const s = v >= 0 ? '+' + v.toFixed(1) + '%' : v.toFixed(1) + '%';
+  return s;
+}
+
+function fmtAge(hours) {
+  if (hours == null || hours >= 9000) return '--';
+  if (hours < 1) return Math.round(hours * 60) + 'm';
+  if (hours < 24) return hours.toFixed(1) + 'h';
+  return (hours / 24).toFixed(1) + 'd';
+}
+
+function fmtNum(v) {
+  if (v == null) return '--';
+  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  return v.toLocaleString();
+}
+
+function pctClass(v) {
+  if (v > 0) return 'positive';
+  if (v < 0) return 'negative';
+  return 'neutral';
+}
+
+function scoreColor(score) {
+  if (score >= 60) return 'var(--score-hot)';
+  if (score >= 25) return 'var(--score-warm)';
+  return 'var(--score-cold)';
+}
+
+/* ── Sparkline SVG ─────────────────────────────────────────────── */
+function sparklineSvg(history, w, h) {
+  if (!history || history.length < 2) return '';
+  const scores = history.map(h => h[1]);
+  const mn = Math.min(...scores);
+  const mx = Math.max(...scores);
+  const range = mx - mn || 1;
+  const pts = scores.map((s, i) => {
+    const x = (i / (scores.length - 1)) * w;
+    const y = h - ((s - mn) / range) * (h - 2) - 1;
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const last = scores[scores.length - 1];
+  const color = scoreColor(last);
+  return `<svg class="sparkline" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+    `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.2" stroke-linejoin="round"/>` +
+    `</svg>`;
+}
+
+/* ── Filtering ─────────────────────────────────────────────────── */
+function getFilters() {
+  const parse = (id, def) => {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) ? def : v;
+  };
+  return {
+    minLiq: parse('f-min-liq', 0),
+    maxMcap: parse('f-max-mcap', Infinity),
+    maxAge: parse('f-max-age', 72),
+    minScore: parse('f-min-score', 0),
+    boostedOnly: document.getElementById('f-boosted').checked,
+    search: document.getElementById('f-search').value.toLowerCase().trim(),
+  };
+}
+
+function applyFilters(list) {
+  const f = getFilters();
+  return list.filter(t => {
+    if (t.liquidity_usd < f.minLiq) return false;
+    if (t.market_cap > f.maxMcap && t.market_cap > 0) return false;
+    if (t.age_hours < 9000 && t.age_hours > f.maxAge) return false;
+    if (t.score < f.minScore) return false;
+    if (f.boostedOnly && !t.boost_active) return false;
+    if (f.search) {
+      const hay = (t.symbol + ' ' + t.name + ' ' + t.address).toLowerCase();
+      if (!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+}
+
+/* ── Sorting ───────────────────────────────────────────────────── */
+function sortTokens(list) {
+  const col = sortCol;
+  const dir = sortAsc ? 1 : -1;
+  return [...list].sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (col === 'symbol' || col === 'name') {
+      return dir * String(va || '').localeCompare(String(vb || ''));
+    }
+    if (col === 'txns_m5') {
+      va = (a.buys_m5 || 0) + (a.sells_m5 || 0);
+      vb = (b.buys_m5 || 0) + (b.sells_m5 || 0);
+    }
+    return dir * ((va || 0) - (vb || 0));
+  });
+}
+
+/* ── Render ────────────────────────────────────────────────────── */
+function renderTable() {
+  const filtered = applyFilters(tokens);
+  const sorted = sortTokens(filtered);
+  const tbody = document.getElementById('token-body');
+  const stateMsg = document.getElementById('state-msg');
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = '';
+    stateMsg.innerHTML = tokens.length === 0
+      ? '<div class="spinner"></div><br>Waiting for data...'
+      : 'No tokens match current filters.';
+    stateMsg.style.display = 'block';
+    return;
+  }
+
+  stateMsg.style.display = 'none';
+
+  // Build rows
+  const rows = sorted.map((t, i) => {
+    const rank = i + 1;
+    const txn5m = (t.buys_m5 || 0) + (t.sells_m5 || 0);
+    const prevScore = prevScores[t.address];
+    const scoreDelta = prevScore != null ? t.score - prevScore : 0;
+    const flashClass = Math.abs(scoreDelta) > 1
+      ? (scoreDelta > 0 ? 'flash-up' : 'flash-down')
+      : '';
+    const maxScore = 120;
+    const barWidth = Math.min(100, (t.score / maxScore) * 100);
+
+    return `<tr data-addr="${t.address}" class="${flashClass}" onclick="openToken('${t.pair_url || ''}')">
+      <td>${rank}</td>
+      <td><div class="token-name">
+        <span class="token-symbol">${esc(t.symbol)}</span>
+        <span class="token-full">${esc(t.name)}</span>
+      </div></td>
+      <td>${fmtPrice(t.price_usd)}</td>
+      <td class="${pctClass(t.price_change_m5)}">${fmtPct(t.price_change_m5)}</td>
+      <td class="${pctClass(t.price_change_h1)}">${fmtPct(t.price_change_h1)}</td>
+      <td>${fmtUsd(t.volume_m5)}</td>
+      <td>${fmtUsd(t.volume_h1)}</td>
+      <td>${txn5m} <span style="font-size:9px;color:var(--text-dim)">(${t.buys_m5}/${t.sells_m5})</span></td>
+      <td>${fmtUsd(t.liquidity_usd)}</td>
+      <td>${fmtUsd(t.market_cap)}</td>
+      <td>${fmtAge(t.age_hours)}</td>
+      <td>${t.boost_active ? '<span class="boost-badge">' + t.boost_active + '</span>' : '<span class="neutral">-</span>'}</td>
+      <td>${sparklineSvg(t.history, 72, 18)}</td>
+      <td><div class="score-cell" data-score='${JSON.stringify(t.components || {})}' data-factors='${JSON.stringify({age:t.age_factor,vr:t.vol_ratio,tr:t.txn_ratio,bp:t.buy_pressure})}'>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:${barWidth}%;background:${scoreColor(t.score)}"></div></div>
+        <span class="score-value" style="color:${scoreColor(t.score)}">${t.score.toFixed(0)}</span>
+      </div></td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+
+  // Update prev scores
+  sorted.forEach(t => { prevScores[t.address] = t.score; });
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function openToken(url) {
+  if (url) window.open(url, '_blank');
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────── */
+const tooltip = document.getElementById('tooltip');
+
+document.addEventListener('mousemove', (e) => {
+  const cell = e.target.closest('.score-cell');
+  if (!cell) { tooltip.classList.remove('visible'); return; }
+
+  const comp = JSON.parse(cell.dataset.score || '{}');
+  const fac = JSON.parse(cell.dataset.factors || '{}');
+
+  tooltip.innerHTML = `
+    <div class="tooltip-header">Score Breakdown</div>
+    <div class="tooltip-row"><span>Volume Accel</span><span class="tval">${comp.volume_accel ?? '--'}</span></div>
+    <div class="tooltip-row"><span>Txn Accel</span><span class="tval">${comp.txn_accel ?? '--'}</span></div>
+    <div class="tooltip-row"><span>Boost Signal</span><span class="tval">${comp.boost ?? '--'}</span></div>
+    <div class="tooltip-row"><span>Price Momentum</span><span class="tval">${comp.momentum ?? '--'}</span></div>
+    <div class="tooltip-row"><span>Vol/Liq Ratio</span><span class="tval">${comp.vol_liq ?? '--'}</span></div>
+    <div class="tooltip-divider"></div>
+    <div class="tooltip-row"><span>Age Factor</span><span class="tval">${fac.age ?? '--'}x</span></div>
+    <div class="tooltip-row"><span>Vol Ratio (5m/1h)</span><span class="tval">${fac.vr ?? '--'}x</span></div>
+    <div class="tooltip-row"><span>Txn Ratio (5m/1h)</span><span class="tval">${fac.tr ?? '--'}x</span></div>
+    <div class="tooltip-row"><span>Buy Pressure</span><span class="tval">${((fac.bp ?? 0) * 100).toFixed(0)}%</span></div>
+  `;
+  tooltip.classList.add('visible');
+
+  const rect = tooltip.getBoundingClientRect();
+  let x = e.clientX + 12;
+  let y = e.clientY + 12;
+  if (x + rect.width > window.innerWidth) x = e.clientX - rect.width - 12;
+  if (y + rect.height > window.innerHeight) y = e.clientY - rect.height - 12;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+
+/* ── Column sorting ────────────────────────────────────────────── */
+document.querySelectorAll('thead th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortCol === col) {
+      sortAsc = !sortAsc;
+    } else {
+      sortCol = col;
+      sortAsc = false;
+    }
+    // Update header classes
+    document.querySelectorAll('thead th').forEach(h => {
+      h.classList.remove('sort-active', 'sort-asc');
+    });
+    th.classList.add('sort-active');
+    if (sortAsc) th.classList.add('sort-asc');
+    renderTable();
+  });
+});
+
+/* ── Filter event listeners ────────────────────────────────────── */
+['f-min-liq', 'f-max-mcap', 'f-max-age', 'f-min-score', 'f-boosted', 'f-search'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', renderTable);
+  el.addEventListener('change', renderTable);
+});
+
+/* ── WebSocket ─────────────────────────────────────────────────── */
+function setConnState(state) {
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  dot.className = 'conn-dot ' + state;
+  label.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+}
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+  setConnState('connecting');
+
+  ws.onopen = () => {
+    setConnState('connected');
+    reconnectDelay = 1000;
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'update') {
+        tokens = data.tokens || [];
+        // Update header stats
+        document.getElementById('stat-tokens').textContent = tokens.length;
+        document.getElementById('stat-discovered').textContent = data.total_discovered || '--';
+        document.getElementById('stat-poll').textContent = (data.poll_ms || 0) + 'ms';
+        const now = new Date(data.timestamp * 1000);
+        document.getElementById('stat-updated').textContent =
+          now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+        renderTable();
+      }
+    } catch (e) {
+      console.error('Parse error:', e);
+    }
+  };
+
+  ws.onclose = () => {
+    setConnState('disconnected');
+    setTimeout(() => {
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+      connect();
+    }, reconnectDelay);
+  };
+
+  ws.onerror = () => {
+    ws.close();
+  };
+}
+
+connect();
+</script>
+</body>
+</html>
