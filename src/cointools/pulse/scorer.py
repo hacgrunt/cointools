@@ -1,20 +1,26 @@
-"""Accumulation detection scoring engine.
+"""Dual-mode scoring engine: Momentum + Accumulation.
 
-Finds tokens in the $50K-$5M MCap range showing signs of organic
-accumulation — steady buying across multiple timeframes, volume
-building gradually, and price holding or rising.  Designed to catch
-tokens before they break out, not to chase short-term spikes.
+Two complementary scanners that run simultaneously:
+
+**Momentum** — Surfaces tokens where attention is spiking *right now*.
+Compares 5-minute rates against hourly averages.  Loose filters,
+favours new tokens with accelerating activity.  Good for catching
+runners early, but noisier.
+
+**Accumulation** — Finds tokens in the $50K–$5M MCap range showing
+organic buying across multiple timeframes, building volume, and
+price holding.  Tighter filters, designed to spot breakout candidates
+before they move.  Less noise, higher conviction.
 
 DexScreener provides volume/txn data in 5m, 1h, 6h, 24h windows.
-By comparing buy/sell ratios and volume trends ACROSS these windows,
-we detect sustained accumulation vs pump-and-dump patterns.
+Both modes exploit rate-of-change from single snapshots.
 """
 
 from __future__ import annotations
 
 import time
 
-# ── Filter thresholds ────────────────────────────────────────────────
+# ── Accumulation filter thresholds ────────────────────────────────────
 
 DEFAULT_MIN_LIQUIDITY = 10_000  # $10K minimum liquidity
 DEFAULT_MIN_MARKET_CAP = 50_000  # $50K minimum market cap
@@ -22,6 +28,13 @@ DEFAULT_MAX_MARKET_CAP = 5_000_000  # $5M max market cap
 DEFAULT_MIN_AGE_MINUTES = 10  # at least 10 min old
 DEFAULT_MAX_AGE_HOURS = 168  # 7 days
 DEFAULT_MIN_TXNS_H1 = 10  # at least 10 trades in last hour
+
+# ── Momentum filter thresholds ───────────────────────────────────────
+
+MOMENTUM_MIN_LIQUIDITY = 1_000  # $1K — loose
+MOMENTUM_MAX_MARKET_CAP = 50_000_000  # $50M
+MOMENTUM_MAX_AGE_HOURS = 72  # 3 days
+MOMENTUM_MIN_TXNS_M5 = 1  # at least 1 trade in 5 min
 
 
 def filter_token(
@@ -289,6 +302,188 @@ def score_and_rank(
             continue
 
         result = score_token(token)
+        enriched = {**token, **result}
+        scored.append(enriched)
+
+    scored.sort(key=lambda t: t["score"], reverse=True)
+    return scored
+
+
+# =====================================================================
+# MOMENTUM MODE — attention acceleration scoring
+# =====================================================================
+
+
+def filter_token_momentum(
+    token: dict,
+    *,
+    min_liquidity: float = MOMENTUM_MIN_LIQUIDITY,
+    max_market_cap: float = MOMENTUM_MAX_MARKET_CAP,
+    max_age_hours: float = MOMENTUM_MAX_AGE_HOURS,
+    min_txns_m5: int = MOMENTUM_MIN_TXNS_M5,
+) -> bool:
+    """Return True if the token passes momentum filters (loose)."""
+    liq = token.get("liquidity_usd", 0)
+    mcap = token.get("market_cap", 0)
+    txns_m5 = token.get("buys_m5", 0) + token.get("sells_m5", 0)
+    created = token.get("pair_created_at", 0)
+
+    if liq < min_liquidity:
+        return False
+    if mcap > max_market_cap and mcap > 0:
+        return False
+    if txns_m5 < min_txns_m5:
+        return False
+
+    if created > 0:
+        age_hours = (time.time() * 1000 - created) / 3_600_000
+        if age_hours > max_age_hours:
+            return False
+
+    return True
+
+
+def score_token_momentum(token: dict) -> dict:
+    """Compute the momentum / attention-acceleration score.
+
+    Returns a dict with score, component breakdown, and derived metrics.
+    Score can exceed 100 for very hot tokens (age multiplier applies).
+
+    Components (before age multiplier):
+      - vol_accel    (0-30): 5m volume rate vs 1h average
+      - txn_accel    (0-25): 5m txn rate vs 1h average
+      - boost        (0-20): DexScreener paid promotion
+      - price_momentum (0-15): 5m price change momentum
+      - vol_liq      (0-10): volume relative to liquidity (activity density)
+    """
+    buys_m5 = token.get("buys_m5", 0)
+    sells_m5 = token.get("sells_m5", 0)
+    buys_h1 = token.get("buys_h1", 0)
+    sells_h1 = token.get("sells_h1", 0)
+
+    vol_m5 = token.get("volume_m5", 0)
+    vol_h1 = token.get("volume_h1", 0)
+
+    price_m5 = token.get("price_change_m5", 0)
+
+    liq = token.get("liquidity_usd", 0)
+    mcap = token.get("market_cap", 0)
+    boost_active = token.get("boost_active", 0)
+    created = token.get("pair_created_at", 0)
+
+    txn_m5 = buys_m5 + sells_m5
+    txn_h1 = buys_h1 + sells_h1
+
+    # ── 1. Volume Acceleration (0-30 pts) ─────────────────────
+    # Compare 5m volume rate to the hourly average.
+    # If 5m rate >> hourly average, attention is accelerating.
+    vol_h1_per_5m = vol_h1 / 12 if vol_h1 > 0 else 0
+    if vol_h1_per_5m > 0:
+        vol_accel_ratio = vol_m5 / vol_h1_per_5m
+    else:
+        vol_accel_ratio = 3.0 if vol_m5 > 0 else 0
+
+    # 1x = baseline (0 pts), 2x = moderate (15 pts), 4x+ = full (30 pts)
+    vol_accel_score = _clamp((vol_accel_ratio - 1) * 10, 0, 30)
+
+    # ── 2. Transaction Acceleration (0-25 pts) ────────────────
+    txn_h1_per_5m = txn_h1 / 12 if txn_h1 > 0 else 0
+    if txn_h1_per_5m > 0:
+        txn_accel_ratio = txn_m5 / txn_h1_per_5m
+    else:
+        txn_accel_ratio = 3.0 if txn_m5 > 0 else 0
+
+    txn_accel_score = _clamp((txn_accel_ratio - 1) * 8, 0, 25)
+
+    # ── 3. Boost Signal (0-20 pts) ────────────────────────────
+    boost_score = _clamp(boost_active * 4, 0, 20)
+
+    # ── 4. Price Momentum (0-15 pts) ──────────────────────────
+    # Positive 5m price change = momentum building
+    if price_m5 > 0:
+        price_momentum_score = _clamp(price_m5 * 1.5, 0, 15)
+    else:
+        price_momentum_score = 0
+
+    # ── 5. Volume / Liquidity Ratio (0-10 pts) ────────────────
+    # High volume relative to liquidity = high activity density
+    if liq > 0:
+        vol_liq_ratio = (vol_m5 / liq) * 100
+    else:
+        vol_liq_ratio = 0
+    vol_liq_score = _clamp(vol_liq_ratio * 5, 0, 10)
+
+    # ── Raw score ─────────────────────────────────────────────
+    raw = (
+        vol_accel_score
+        + txn_accel_score
+        + boost_score
+        + price_momentum_score
+        + vol_liq_score
+    )
+
+    # ── Age multiplier ────────────────────────────────────────
+    # Newer tokens with momentum are more interesting.
+    if created > 0:
+        age_hours = max(0, (time.time() * 1000 - created) / 3_600_000)
+    else:
+        age_hours = 999
+
+    if age_hours < 1:
+        age_mult = 2.0
+    elif age_hours < 6:
+        age_mult = 1.5
+    elif age_hours < 24:
+        age_mult = 1.2
+    elif age_hours < 48:
+        age_mult = 1.0
+    else:
+        # Gradual decay for older tokens
+        age_mult = max(0.5, 1.0 - (age_hours - 48) / 200)
+
+    final_score = max(0, raw * age_mult)
+
+    return {
+        "score": round(final_score, 1),
+        "components": {
+            "vol_accel": round(vol_accel_score, 1),
+            "txn_accel": round(txn_accel_score, 1),
+            "boost": round(boost_score, 1),
+            "price_momentum": round(price_momentum_score, 1),
+            "vol_liq": round(vol_liq_score, 1),
+        },
+        "age_mult": round(age_mult, 2),
+        "age_hours": round(age_hours, 1),
+        "vol_accel_ratio": round(vol_accel_ratio, 2),
+        "txn_accel_ratio": round(txn_accel_ratio, 2),
+        "vol_liq_ratio": round(vol_liq_ratio, 2),
+        "buy_ratio_m5": round(_buy_ratio(buys_m5, sells_m5), 2),
+    }
+
+
+def score_and_rank_momentum(
+    tokens: list[dict],
+    *,
+    min_liquidity: float = MOMENTUM_MIN_LIQUIDITY,
+    max_market_cap: float = MOMENTUM_MAX_MARKET_CAP,
+    max_age_hours: float = MOMENTUM_MAX_AGE_HOURS,
+) -> list[dict]:
+    """Filter, score, and rank tokens by momentum (attention acceleration).
+
+    Returns tokens sorted by momentum score (descending).
+    """
+    scored: list[dict] = []
+
+    for token in tokens:
+        if not filter_token_momentum(
+            token,
+            min_liquidity=min_liquidity,
+            max_market_cap=max_market_cap,
+            max_age_hours=max_age_hours,
+        ):
+            continue
+
+        result = score_token_momentum(token)
         enriched = {**token, **result}
         scored.append(enriched)
 

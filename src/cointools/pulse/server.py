@@ -11,7 +11,7 @@ from pathlib import Path
 from aiohttp import web
 
 from cointools.pulse.scanner import PulseScanner
-from cointools.pulse.scorer import score_and_rank
+from cointools.pulse.scorer import score_and_rank, score_and_rank_momentum
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,11 @@ class PulseServer:
         self.port = port
         self.scanner = PulseScanner()
         self.clients: set[web.WebSocketResponse] = set()
-        self.token_history: dict[str, list[list]] = {}  # addr → [[ts, score], ...]
+        # Per-mode score history: mode → addr → [[ts, score], ...]
+        self.token_history: dict[str, dict[str, list[list]]] = {
+            "accumulation": {},
+            "momentum": {},
+        }
         self.latest_payload: str = ""
         self._poll_task: asyncio.Task | None = None
 
@@ -95,36 +99,45 @@ class PulseServer:
                 logger.exception("Poll error")
             await asyncio.sleep(POLL_INTERVAL)
 
+    def _update_history(self, mode: str, scored: list[dict], now: float) -> None:
+        """Update score history for a given mode."""
+        hist = self.token_history[mode]
+        for token in scored:
+            addr = token["address"]
+            if addr not in hist:
+                hist[addr] = []
+            hist[addr].append([round(now), token["score"]])
+            if len(hist[addr]) > MAX_HISTORY:
+                hist[addr] = hist[addr][-MAX_HISTORY:]
+
+        active_addrs = {t["address"] for t in scored}
+        stale = [a for a in hist if a not in active_addrs]
+        for a in stale:
+            if hist[a]:
+                age = now - hist[a][-1][0]
+                if age > 600:
+                    del hist[a]
+
     async def _poll_once(self) -> None:
         t0 = time.time()
         raw_tokens = await self.scanner.poll()
-        scored = score_and_rank(raw_tokens)
 
-        # Update history
+        # Score in both modes
+        accum_scored = score_and_rank(raw_tokens)
+        momentum_scored = score_and_rank_momentum(raw_tokens)
+
         now = time.time()
-        for token in scored:
-            addr = token["address"]
-            if addr not in self.token_history:
-                self.token_history[addr] = []
-            self.token_history[addr].append([round(now), token["score"]])
-            # Trim to max history
-            if len(self.token_history[addr]) > MAX_HISTORY:
-                self.token_history[addr] = self.token_history[addr][-MAX_HISTORY:]
+        self._update_history("accumulation", accum_scored, now)
+        self._update_history("momentum", momentum_scored, now)
 
-        # Prune history for tokens no longer in results
-        active_addrs = {t["address"] for t in scored}
-        stale = [a for a in self.token_history if a not in active_addrs]
-        for a in stale:
-            # Keep stale entries for a while in case they come back
-            if len(self.token_history[a]) > 0:
-                age = now - self.token_history[a][-1][0]
-                if age > 600:  # 10 minutes stale → remove
-                    del self.token_history[a]
+        # Attach history and trim
+        accum_top = accum_scored[:MAX_TOKENS]
+        for token in accum_top:
+            token["history"] = self.token_history["accumulation"].get(token["address"], [])
 
-        # Attach history and trim to max tokens
-        top = scored[:MAX_TOKENS]
-        for token in top:
-            token["history"] = self.token_history.get(token["address"], [])
+        momentum_top = momentum_scored[:MAX_TOKENS]
+        for token in momentum_top:
+            token["history"] = self.token_history["momentum"].get(token["address"], [])
 
         elapsed = round(time.time() - t0, 2)
         payload = json.dumps({
@@ -132,15 +145,22 @@ class PulseServer:
             "timestamp": round(now),
             "poll_ms": round(elapsed * 1000),
             "total_discovered": len(raw_tokens),
-            "total_scored": len(scored),
-            "tokens": top,
+            "accumulation": {
+                "total_scored": len(accum_scored),
+                "tokens": accum_top,
+            },
+            "momentum": {
+                "total_scored": len(momentum_scored),
+                "tokens": momentum_top,
+            },
         })
         self.latest_payload = payload
 
         logger.info(
-            "Poll complete: %d discovered, %d scored, %d clients, %.1fs",
+            "Poll complete: %d discovered, %d accum / %d momentum, %d clients, %.1fs",
             len(raw_tokens),
-            len(scored),
+            len(accum_scored),
+            len(momentum_scored),
             len(self.clients),
             elapsed,
         )
