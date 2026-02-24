@@ -491,3 +491,38 @@ def pulse(port: int, host: str) -> None:
 
     server = PulseServer(host=host, port=port)
     server.run()
+
+
+# ── Miners: Botcoin miner count tracker ──────────────────────────
+
+
+@cli.command()
+@click.option(
+    "--port",
+    type=int,
+    default=8421,
+    help="Port to run the dashboard server on (default: 8421).",
+)
+@click.option(
+    "--host",
+    type=str,
+    default="0.0.0.0",
+    help="Host to bind to (default: 0.0.0.0).",
+)
+def miners(port: int, host: str) -> None:
+    """Launch the Botcoin miner count tracker dashboard.
+
+    Scrapes agentmoney.net every 15 minutes, logs the active miner
+    count to a CSV, and serves a live chart at http://localhost:<port>.
+    """
+    from cointools.miners.server import MinersServer
+
+    console.print(
+        f"\n[bold green]MINERS[/bold green] — Botcoin Miner Tracker\n"
+        f"Dashboard: [bold]http://localhost:{port}[/bold]\n"
+        f"CSV log:   [dim]~/.cointools/miners.csv[/dim]\n"
+        f"Polling every 15 minutes. Press Ctrl+C to stop.\n"
+    )
+
+    server = MinersServer(host=host, port=port)
+    server.run()

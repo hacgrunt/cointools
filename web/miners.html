@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MINERS — Botcoin Miner Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #08080c;
+  --bg-card: #0e0e14;
+  --bg-row-hover: #181824;
+  --border: #1e1e30;
+  --border-bright: #2a2a40;
+  --text: #d8d8e0;
+  --text-secondary: #9898a8;
+  --text-dim: #686878;
+  --text-muted: #484858;
+  --green: #00e87b;
+  --green-dim: #00a858;
+  --red: #ff3b4a;
+  --amber: #ffb020;
+  --blue: #5599ff;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header {
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.logo {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--green);
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-top: 1px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+
+.conn-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.conn-dot.connecting { background: var(--amber); animation: pulse-dot 1s ease-in-out infinite; }
+.conn-dot.disconnected { background: var(--red); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.download-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.download-btn:hover { color: var(--text); border-color: var(--border-bright); }
+
+/* ── Stats Cards ─────────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+.stat-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.stat-card-value {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.stat-card-value.highlight { color: var(--green); }
+
+.stat-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.stat-positive { color: var(--green); }
+.stat-negative { color: var(--red); }
+
+/* ── Chart ───────────────────────────────────────────────────── */
+.chart-section {
+  padding: 12px 24px 24px;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.range-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.range-btn {
+  background: var(--bg);
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.range-btn:not(:last-child) { border-right: 1px solid var(--border); }
+.range-btn:hover { color: var(--text); }
+.range-btn.active { color: var(--green); background: rgba(0, 232, 123, 0.08); }
+
+.chart-wrap {
+  position: relative;
+  height: 400px;
+}
+
+/* ── Data Table ──────────────────────────────────────────────── */
+.table-section {
+  padding: 0 24px 24px;
+}
+
+.table-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table-card-header {
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  background: #10101a;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+tbody tr { border-bottom: 1px solid #111118; }
+tbody tr:nth-child(even) { background: rgba(255,255,255,0.01); }
+tbody tr:hover { background: var(--bg-row-hover); }
+
+tbody td {
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.table-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+/* ── Loading state ───────────────────────────────────────────── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--text-dim);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.footer {
+  padding: 16px 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+  .header { flex-wrap: wrap; gap: 12px; }
+  .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; }
+  .chart-section, .table-section { padding: 0 12px 12px; }
+  .chart-wrap { height: 280px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="logo">MINERS</div>
+      <div class="logo-sub">Botcoin Miner Tracker</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <a class="download-btn" href="/csv">Download CSV</a>
+    <div class="conn-status">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-label">Connecting</span>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-card-label">Active Miners</div>
+    <div class="stat-card-value highlight" id="stat-miners">--</div>
+    <div class="stat-card-sub" id="stat-miners-delta"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Current Epoch</div>
+    <div class="stat-card-value" id="stat-epoch">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Epoch Rewards (Est.)</div>
+    <div class="stat-card-value" id="stat-rewards">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Total Mined</div>
+    <div class="stat-card-value" id="stat-total">--</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Data Points</div>
+    <div class="stat-card-value" id="stat-points">0</div>
+    <div class="stat-card-sub" id="stat-since"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Last Updated</div>
+    <div class="stat-card-value" id="stat-updated" style="font-size:20px">--</div>
+    <div class="stat-card-sub">Polls every 15 min</div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-section">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">Active Miners Over Time</div>
+      <div class="range-toggle" id="range-toggle">
+        <button class="range-btn" data-range="6">6h</button>
+        <button class="range-btn" data-range="24">24h</button>
+        <button class="range-btn" data-range="72">3d</button>
+        <button class="range-btn" data-range="168">7d</button>
+        <button class="range-btn active" data-range="0">All</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="miners-chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Recent data table -->
+<div class="table-section">
+  <div class="table-card">
+    <div class="table-card-header">Recent Readings</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Active Miners</th>
+          <th>Change</th>
+          <th>Epoch</th>
+          <th>Epoch Rewards</th>
+        </tr>
+      </thead>
+      <tbody id="data-body">
+        <tr><td colspan="5" class="table-empty">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Data scraped from agentmoney.net every 15 minutes. Historical data persisted to CSV.
+</div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────── */
+let history = [];
+let chart = null;
+let ws = null;
+let reconnectDelay = 1000;
+let selectedRange = 0; // hours, 0 = all
+
+/* ── Chart setup ──────────────────────────────────────────────── */
+function initChart() {
+  const ctx = document.getElementById('miners-chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      datasets: [{
+        label: 'Active Miners',
+        data: [],
+        borderColor: '#00e87b',
+        backgroundColor: 'rgba(0, 232, 123, 0.08)',
+        fill: true,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#00e87b',
+        pointHoverRadius: 6,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'nearest',
+        intersect: false,
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#18182a',
+          borderColor: '#2a2a40',
+          borderWidth: 1,
+          titleColor: '#d8d8e0',
+          bodyColor: '#9898a8',
+          titleFont: { weight: '700' },
+          padding: 12,
+          callbacks: {
+            title: function(items) {
+              const d = new Date(items[0].parsed.x);
+              return d.toLocaleString();
+            },
+            label: function(item) {
+              return 'Miners: ' + item.parsed.y.toLocaleString();
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            tooltipFormat: 'MMM d, yyyy HH:mm',
+            displayFormats: {
+              minute: 'HH:mm',
+              hour: 'MMM d HH:mm',
+              day: 'MMM d',
+            }
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#686878', maxTicksLimit: 10 },
+        },
+        y: {
+          beginAtZero: false,
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            color: '#686878',
+            callback: function(v) { return v.toLocaleString(); }
+          },
+        }
+      }
+    }
+  });
+}
+
+function updateChart() {
+  if (!chart) return;
+
+  let data = history;
+  if (selectedRange > 0) {
+    const cutoff = Date.now() / 1000 - selectedRange * 3600;
+    data = history.filter(p => p.timestamp >= cutoff);
+  }
+
+  chart.data.datasets[0].data = data.map(p => ({
+    x: p.timestamp * 1000,
+    y: p.active_miners,
+  }));
+  chart.update('none');
+}
+
+/* ── Stats update ─────────────────────────────────────────────── */
+function updateStats() {
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+
+  document.getElementById('stat-miners').textContent =
+    latest && latest.active_miners != null ? latest.active_miners.toLocaleString() : '--';
+
+  document.getElementById('stat-epoch').textContent =
+    latest && latest.epoch != null ? latest.epoch : '--';
+
+  document.getElementById('stat-rewards').textContent =
+    latest && latest.epoch_rewards ? latest.epoch_rewards : '--';
+
+  document.getElementById('stat-total').textContent =
+    latest && latest.total_mined ? latest.total_mined : '--';
+
+  document.getElementById('stat-points').textContent = history.length;
+
+  // Delta from previous reading
+  if (history.length >= 2) {
+    const prev = history[history.length - 2];
+    const curr = history[history.length - 1];
+    if (prev.active_miners != null && curr.active_miners != null) {
+      const delta = curr.active_miners - prev.active_miners;
+      const el = document.getElementById('stat-miners-delta');
+      if (delta > 0) {
+        el.innerHTML = '<span class="stat-positive">+' + delta + ' since last poll</span>';
+      } else if (delta < 0) {
+        el.innerHTML = '<span class="stat-negative">' + delta + ' since last poll</span>';
+      } else {
+        el.textContent = 'No change';
+      }
+    }
+  }
+
+  // Since date
+  if (history.length > 0) {
+    const first = new Date(history[0].timestamp * 1000);
+    document.getElementById('stat-since').textContent = 'Since ' + first.toLocaleDateString();
+  }
+
+  // Last updated
+  if (latest) {
+    const t = new Date(latest.timestamp * 1000);
+    document.getElementById('stat-updated').textContent =
+      t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+}
+
+/* ── Table update ─────────────────────────────────────────────── */
+function updateTable() {
+  const tbody = document.getElementById('data-body');
+  if (history.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty">Waiting for data...</td></tr>';
+    return;
+  }
+
+  // Show most recent 50 rows, newest first
+  const recent = history.slice(-50).reverse();
+  const rows = recent.map((p, i) => {
+    const time = new Date(p.timestamp * 1000);
+    const timeStr = time.toLocaleString([], {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+    // Compute change from prior reading
+    let changeHtml = '--';
+    const idx = history.length - 1 - i;
+    if (idx > 0) {
+      const prev = history[idx - 1];
+      if (prev.active_miners != null && p.active_miners != null) {
+        const delta = p.active_miners - prev.active_miners;
+        if (delta > 0) changeHtml = '<span class="stat-positive">+' + delta + '</span>';
+        else if (delta < 0) changeHtml = '<span class="stat-negative">' + delta + '</span>';
+        else changeHtml = '0';
+      }
+    }
+
+    return `<tr>
+      <td>${timeStr}</td>
+      <td>${p.active_miners != null ? p.active_miners.toLocaleString() : '--'}</td>
+      <td>${changeHtml}</td>
+      <td>${p.epoch != null ? p.epoch : '--'}</td>
+      <td>${p.epoch_rewards || '--'}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+}
+
+/* ── Range toggle ─────────────────────────────────────────────── */
+document.querySelectorAll('.range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedRange = parseInt(btn.dataset.range);
+    document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateChart();
+  });
+});
+
+/* ── WebSocket ─────────────────────────────────────────────────── */
+function setConnState(state) {
+  const dot = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  dot.className = 'conn-dot ' + state;
+  const labels = { connected: 'Live', connecting: 'Connecting...', disconnected: 'Reconnecting...' };
+  label.textContent = labels[state] || state;
+}
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(proto + '//' + location.host + '/ws');
+  setConnState('connecting');
+
+  ws.onopen = () => {
+    setConnState('connected');
+    reconnectDelay = 1000;
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'init') {
+        history = data.history || [];
+        updateStats();
+        updateChart();
+        updateTable();
+      } else if (data.type === 'update') {
+        history = data.history || history;
+        updateStats();
+        updateChart();
+        updateTable();
+      }
+    } catch (e) {
+      console.error('Parse error:', e);
+    }
+  };
+
+  ws.onclose = () => {
+    setConnState('disconnected');
+    setTimeout(() => {
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+      connect();
+    }, reconnectDelay);
+  };
+
+  ws.onerror = () => { ws.close(); };
+}
+
+/* ── Init ──────────────────────────────────────────────────────── */
+initChart();
+connect();
+</script>
+</body>
+</html>
